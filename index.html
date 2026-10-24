@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="ru" class="h-full bg-slate-950 text-slate-100 select-none">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>CyberArcade: Mastery Hub</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Inter:wght@400;600&display=swap');
+        body { font-family: 'Inter', sans-serif; touch-action: manipulation; }
+        .font-orbitron { font-family: 'Orbitron', sans-serif; }
+        
+        .glow-box {
+            box-shadow: 0 0 20px rgba(0, 242, 254, 0.15);
+            border: 1px solid rgba(0, 242, 254, 0.3);
+        }
+        .game-card {
+            transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+        .game-card:active {
+            transform: scale(0.97);
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col justify-between p-4 max-w-md mx-auto relative overflow-x-hidden bg-slate-950 text-slate-100">
+
+    <!-- Шапка Хаба: Общий Престиж и Уровень Мастера -->
+    <header class="w-full bg-slate-900 p-4 rounded-3xl glow-box mb-4 shrink-0 relative overflow-hidden">
+        <div class="absolute -right-6 -bottom-6 text-7xl opacity-10 pointer-events-none">⚡</div>
+        
+        <div class="flex justify-between items-center mb-3">
+            <span class="text-[10px] text-cyan-400 font-bold uppercase tracking-widest">CyberArcade Platform</span>
+            <span id="master-rank" class="text-[10px] bg-purple-900/60 border border-purple-500 text-purple-300 px-2.5 py-0.5 rounded-full font-bold">Ранг: Стажёр</span>
+        </div>
+
+        <div class="flex justify-between items-baseline">
+            <div>
+                <h1 class="text-xs text-slate-400 uppercase">Общий Престиж Мастера</h1>
+                <div class="text-3xl font-black text-purple-400 font-orbitron mt-1">⭐ <span id="total-prestige">0</span></div>
+            </div>
+            <div class="text-right">
+                <span class="text-xs text-slate-400">Активных модулей:</span>
+                <div class="text-lg font-bold text-cyan-400 font-orbitron">5 / 5</div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Список игровых модулей -->
+    <main class="flex-1 flex flex-col space-y-3 mb-4 overflow-y-auto">
+        <h2 class="text-xs font-bold text-slate-400 uppercase tracking-wider px-1">Доступные терминалы</h2>
+
+        <!-- Модуль 1 -->
+        <a href="tiles-survive/index.html" class="game-card bg-slate-900 hover:bg-slate-850 p-3.5 rounded-2xl border border-cyan-500/30 flex items-center justify-between shadow-lg">
+            <div class="flex items-center gap-3">
+                <div class="w-12 h-12 rounded-xl bg-cyan-500/20 border border-cyan-400/40 flex items-center justify-center text-2xl shrink-0">
+                    ⚡
+                </div>
+                <div>
+                    <h3 class="text-xs font-bold text-cyan-300 font-orbitron">Power Station</h3>
+                    <p class="text-[10px] text-slate-400">Кликер энергостанции и перегрузки</p>
+                </div>
+            </div>
+            <div class="text-right shrink-0">
+                <span class="text-[10px] text-purple-400 font-bold block" id="mod1-prestige">⭐ 0</span>
+                <span class="text-[9px] text-slate-500">Перейти ➔</span>
+            </div>
+        </a>
+
+        <!-- Модуль 2 -->
+        <a href="neon-solitaire/index.html" class="game-card bg-slate-900 hover:bg-slate-850 p-3.5 rounded-2xl border border-purple-500/30 flex items-center justify-between shadow-lg">
+            <div class="flex items-center gap-3">
+                <div class="w-12 h-12 rounded-xl bg-purple-500/20 border border-purple-400/40 flex items-center justify-center text-2xl shrink-0">
+                    🃏
+                </div>
+                <div>
+                    <h3 class="text-xs font-bold text-purple-300 font-orbitron">Neon Match Solitaire</h3>
+                    <p class="text-[10px] text-slate-400">Тройные неоновые совпадения</p>
+                </div>
+            </div>
+            <div class="text-right shrink-0">
+                <span class="text-[10px] text-purple-400 font-bold block" id="mod2-prestige">⭐ 0</span>
+                <span class="text-[9px] text-slate-500">Перейти ➔</span>
+            </div>
+        </a>
+
+        <!-- Модуль 3 -->
+        <a href="circuit-fix/index.html" class="game-card bg-slate-900 hover:bg-slate-850 p-3.5 rounded-2xl border border-emerald-500/30 flex items-center justify-between shadow-lg">
+            <div class="flex items-center gap-3">
+                <div class="w-12 h-12 rounded-xl bg-emerald-500/20 border border-emerald-400/40 flex items-center justify-center text-2xl shrink-0">
+                    🔌
+                </div>
+                <div>
+                    <h3 class="text-xs font-bold text-emerald-300 font-orbitron">Circuit Fix</h3>
+                    <p class="text-[10px] text-slate-400">Электромонтаж и сборка цепи</p>
+                </div>
+            </div>
+            <div class="text-right shrink-0">
+                <span class="text-[10px] text-purple-400 font-bold block" id="mod3-prestige">⭐ 0</span>
+                <span class="text-[9px] text-slate-500">Перейти ➔</span>
+            </div>
+        </a>
+
+        <!-- Модуль 4 -->
+        <a href="cpu-cooler/index.html" class="game-card bg-slate-900 hover:bg-slate-850 p-3.5 rounded-2xl border border-blue-500/30 flex items-center justify-between shadow-lg">
+            <div class="flex items-center gap-3">
+                <div class="w-12 h-12 rounded-xl bg-blue-500/20 border border-blue-400/40 flex items-center justify-center text-2xl shrink-0">
+                    💻
+                </div>
+                <div>
+                    <h3 class="text-xs font-bold text-blue-300 font-orbitron">CPU Cooler</h3>
+                    <p class="text-[10px] text-slate-400">Разгон кремния и термобаланс</p>
+                </div>
+            </div>
+            <div class="text-right shrink-0">
+                <span class="text-[10px] text-purple-400 font-bold block" id="mod4-prestige">⭐ 0</span>
+                <span class="text-[9px] text-slate-500">Перейти ➔</span>
+            </div>
+        </a>
+
+        <!-- Модуль 5 -->
+        <a href="repair-shop/index.html" class="game-card bg-slate-900 hover:bg-slate-850 p-3.5 rounded-2xl border border-yellow-500/30 flex items-center justify-between shadow-lg">
+            <div class="flex items-center gap-3">
+                <div class="w-12 h-12 rounded-xl bg-yellow-500/20 border border-yellow-400/40 flex items-center justify-center text-2xl shrink-0">
+                    🛠️
+                </div>
+                <div>
+                    <h3 class="text-xs font-bold text-yellow-300 font-orbitron">Repair Shop</h3>
+                    <p class="text-[10px] text-slate-400">Мастерская плат и ловля искр</p>
+                </div>
+            </div>
+            <div class="text-right shrink-0">
+                <span class="text-[10px] text-purple-400 font-bold block" id="mod5-prestige">⭐ 0</span>
+                <span class="text-[9px] text-slate-500">Перейти ➔</span>
+            </div>
+        </a>
+    </main>
+
+    <!-- Подвал / Сброс общей статистики -->
+    <footer class="shrink-0 pt-2 border-t border-slate-900 flex justify-between items-center text-[10px] text-slate-500">
+        <span>CyberArcade Platform v2.5</span>
+        <button onclick="resetHubProgress()" class="hover:text-red-400 transition">Сбросить все данные</button>
+    </footer>
+
+    <script>
+        function loadHubData() {
+            let p1 = 0, p2 = 0, p3 = 0, p4 = 0, p5 = 0;
+
+            // Модуль 1
+            try {
+                const s1 = JSON.parse(localStorage.getItem('power_station_save_v5') || '{}');
+                p1 = s1.prestige || 0;
+            } catch(e){}
+
+            // Модуль 2
+            try {
+                const s2 = JSON.parse(localStorage.getItem('neon_solitaire_save_v2') || '{}');
+                p2 = s2.prestige || 0;
+            } catch(e){}
+
+            // Модуль 3
+            try {
+                const s3 = JSON.parse(localStorage.getItem('circuit_fix_save_v6') || '{}');
+                p3 = s3.prestige || 0;
+            } catch(e){}
+
+            // Модуль 4
+            try {
+                const s4 = JSON.parse(localStorage.getItem('silicon_miner_save_v4') || '{}');
+                p4 = s4.prestige || 0;
+            } catch(e){}
+
+            // Модуль 5
+            try {
+                const s5 = JSON.parse(localStorage.getItem('repair_shop_save_v3') || '{}');
+                p5 = s5.prestige || 0;
+            } catch(e){}
+
+            // Вывод по модулям
+            document.getElementById('mod1-prestige').innerText = `⭐ ${p1}`;
+            document.getElementById('mod2-prestige').innerText = `⭐ ${p2}`;
+            document.getElementById('mod3-prestige').innerText = `⭐ ${p3}`;
+            document.getElementById('mod4-prestige').innerText = `⭐ ${p4}`;
+            document.getElementById('mod5-prestige').innerText = `⭐ ${p5}`;
+
+            // Суммарный престиж
+            let total = p1 + p2 + p3 + p4 + p5;
+            document.getElementById('total-prestige').innerText = total;
+
+            // Расчет ранга мастера
+            let rankEl = document.getElementById('master-rank');
+            if (total >= 150) {
+                rankEl.innerText = "Ранг: Легендарный Архитектор 👑";
+                rankEl.className = "text-[10px] bg-amber-950 border border-amber-500 text-amber-300 px-2.5 py-0.5 rounded-full font-bold";
+            } else if (total >= 80) {
+                rankEl.innerText = "Ранг: Старший Электромеханик ⚡";
+                rankEl.className = "text-[10px] bg-purple-950 border border-purple-500 text-purple-300 px-2.5 py-0.5 rounded-full font-bold";
+            } else if (total >= 30) {
+                rankEl.innerText = "Ранг: Опытный Монтажник 🔌";
+                rankEl.className = "text-[10px] bg-blue-950 border border-blue-500 text-blue-300 px-2.5 py-0.5 rounded-full font-bold";
+            } else {
+                rankEl.innerText = "Ранг: Стажёр 🛠️";
+                rankEl.className = "text-[10px] bg-slate-800 border border-slate-700 text-slate-300 px-2.5 py-0.5 rounded-full font-bold";
+            }
+        }
+
+        function resetHubProgress() {
+            if (confirm("Вы уверены, что хотите сбросить сохранения всех пяти игр?")) {
+                localStorage.clear();
+                location.reload();
+            }
+        }
+
+        window.onload = loadHubData;
+    </script>
+</body>
+</html>

@@ -1,0 +1,698 @@
+<!DOCTYPE html>
+<html lang="ru" class="h-full bg-slate-950 text-slate-100 select-none">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Tiles Survive: Power Station</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Inter:wght@400;600&display=swap');
+        body { font-family: 'Orbitron', sans-serif; touch-action: manipulation; }
+        
+        .glow-box {
+            box-shadow: 0 0 20px rgba(0, 242, 254, 0.15);
+            border: 1px solid rgba(0, 242, 254, 0.3);
+        }
+        .clicker-btn:active { transform: scale(0.95); }
+        
+        @keyframes floatUp {
+            0% { opacity: 1; transform: translateY(0) scale(1); }
+            100% { opacity: 0; transform: translateY(-50px) scale(1.2); }
+        }
+        .floating-text {
+            position: absolute;
+            animation: floatUp 0.7s ease-out forwards;
+            pointer-events: none;
+            font-weight: bold;
+            color: #00f2fe;
+            text-shadow: 0 0 8px rgba(0, 242, 254, 0.8);
+            z-index: 20;
+        }
+
+        @keyframes overloadPulse {
+            0%, 100% { box-shadow: 0 0 25px #00f2fe, inset 0 0 15px #00f2fe; border-color: #38bdf8; }
+            50% { box-shadow: 0 0 45px #a855f7, inset 0 0 25px #a855f7; border-color: #c084fc; }
+        }
+        .overload-active { animation: overloadPulse 0.6s infinite alternate; }
+
+        @keyframes slideIn { from { transform: translateY(-30px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+        .toast { animation: slideIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col justify-between p-4 max-w-md mx-auto relative overflow-x-hidden bg-slate-950 text-slate-100">
+
+    <!-- Тосты уведомлений -->
+    <div id="toast-container" class="fixed top-4 left-1/2 transform -translate-x-1/2 w-11/12 max-w-md z-50 flex flex-col gap-2 pointer-events-none"></div>
+
+    <!-- Модалка офлайн дохода -->
+    <div id="offline-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-40 hidden flex items-center justify-center p-4">
+        <div class="bg-slate-900 border border-cyan-500/50 rounded-2xl p-6 max-w-xs w-full text-center glow-box space-y-4">
+            <div class="text-4xl">🔋</div>
+            <h2 class="text-lg font-black text-cyan-400 uppercase tracking-wide">Станция работала!</h2>
+            <p class="text-xs text-slate-300">Пока вас не было (<span id="offline-time" class="text-amber-400 font-bold">0 сек</span>), энергоблоки сгенерировали:</p>
+            <div class="text-3xl font-black text-cyan-300 py-2 border-y border-slate-800" id="offline-energy">+0 ⚡</div>
+            <button onclick="closeOfflineModal()" class="w-full bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-slate-950 font-black py-2.5 rounded-xl text-xs uppercase tracking-wider shadow-lg transition">
+                Забрать энергию
+            </button>
+        </div>
+    </div>
+
+    <!-- Шапка модуля с кнопкой возврата в Хаб -->
+    <header class="w-full bg-slate-900 p-3.5 rounded-2xl glow-box mb-3 relative overflow-hidden shrink-0">
+        <div id="overload-banner" class="hidden absolute top-0 left-0 right-0 bg-cyan-500 text-slate-950 text-[9px] font-black text-center py-0.5 tracking-widest uppercase">
+            ⚡ ПЕРЕГРУЗКА АКТИВНА (x5 EPS) ⚡
+        </div>
+        
+        <div class="flex justify-between items-center mb-2 mt-0.5">
+            <!-- Кнопка возврата на главный хаб -->
+            <a href="../index.html" class="bg-slate-800 hover:bg-slate-700 text-cyan-400 px-2.5 py-1 rounded-xl text-[10px] font-bold transition flex items-center gap-1.5 active:scale-95 border border-cyan-500/30">
+                <i class="fa-solid fa-arrow-left"></i> На хаб
+            </a>
+            <span class="text-[10px] text-slate-400 uppercase tracking-widest">Модуль #1</span>
+            <span id="station-level" class="text-xs text-amber-400 font-bold">Уровень 1</span>
+        </div>
+
+        <div class="flex justify-between items-center my-1">
+            <span class="text-[11px] text-slate-400">Престиж станции:</span>
+            <span class="text-xs text-purple-400 font-bold">⭐ <span id="prestige-display">0</span></span>
+        </div>
+
+        <div class="flex items-baseline justify-between border-t border-slate-800 pt-2">
+            <h1 class="text-3xl font-black text-cyan-400 transition-all" id="energy-display">0</h1>
+            <span class="text-xs text-slate-400"><span id="click-power-display" class="text-xs text-slate-500 mr-1">(+1/клик)</span>⚡ <span id="eps-display">0</span>/сек</span>
+        </div>
+
+        <!-- Емкость аккумуляторов -->
+        <div class="mt-2.5">
+            <div class="flex justify-between text-[10px] text-slate-400 mb-1">
+                <span>Заряд аккумуляторов</span>
+                <span id="storage-text">0 / 1000</span>
+            </div>
+            <div class="w-full bg-slate-950 h-2 rounded-full overflow-hidden border border-slate-800">
+                <div id="storage-bar" class="bg-cyan-500 h-full transition-all duration-150" style="width: 0%"></div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Основные вкладки -->
+    <main class="flex-1 flex flex-col relative mb-16 overflow-y-auto">
+        
+        <!-- ВКЛАДКА 1: Станция -->
+        <div id="tab-generator" class="flex flex-col flex-1 space-y-3">
+            <div class="flex flex-col items-center justify-center py-2 relative">
+                <div id="clicker-target" class="clicker-btn w-36 h-36 rounded-full bg-gradient-to-br from-cyan-600 to-blue-900 flex items-center justify-center cursor-pointer shadow-2xl border-4 border-cyan-400/50 relative transition-all">
+                    <span id="target-icon" class="text-5xl transition-transform duration-100">⚡</span>
+                </div>
+                <p class="text-[10px] text-slate-400 mt-2">Кликайте по генератору! (100 кликов = +1 ⭐)</p>
+            </div>
+
+            <!-- Модули -->
+            <div class="bg-slate-900/80 rounded-2xl p-3 border border-slate-800 space-y-2 max-h-52 overflow-y-auto">
+                <h3 class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Базовые модули (Макс. 100 ур.)</h3>
+                
+                <div class="bg-slate-950 p-2.5 rounded-xl flex justify-between items-center border border-slate-800">
+                    <div>
+                        <div class="text-xs font-bold text-cyan-300">Медная обмотка</div>
+                        <div class="text-[10px] text-slate-400">+1 к клику (Ур. <span id="up1-level">0</span>/100)</div>
+                    </div>
+                    <button id="up1-btn" onclick="buyUpgrade(1)" class="bg-cyan-600 hover:bg-cyan-500 disabled:bg-slate-800 disabled:text-slate-500 disabled:cursor-not-allowed text-xs px-3 py-1.5 rounded-lg font-bold transition active:scale-95">
+                        <span id="up1-cost">15</span> ⚡
+                    </button>
+                </div>
+
+                <div class="bg-slate-950 p-2.5 rounded-xl flex justify-between items-center border border-slate-800" id="up2-container">
+                    <div>
+                        <div class="text-xs font-bold text-cyan-300">Паровая турбина</div>
+                        <div class="text-[10px] text-slate-400">+3 ⚡/сек (Ур. <span id="up2-level">0</span>/100)</div>
+                        <div id="up2-lock-msg" class="text-[9px] text-amber-400 font-semibold mt-0.5 hidden">🔒 Требуется Обмотка 50 ур.</div>
+                    </div>
+                    <button id="up2-btn" onclick="buyUpgrade(2)" class="bg-cyan-600 hover:bg-cyan-500 disabled:bg-slate-800 disabled:text-slate-500 disabled:cursor-not-allowed text-xs px-3 py-1.5 rounded-lg font-bold transition active:scale-95">
+                        <span id="up2-cost">500</span> ⚡
+                    </button>
+                </div>
+
+                <div class="bg-slate-950 p-2.5 rounded-xl flex justify-between items-center border border-slate-800" id="up3-container">
+                    <div>
+                        <div class="text-xs font-bold text-cyan-300">Ионный ускоритель</div>
+                        <div class="text-[10px] text-slate-400">+20 ⚡/сек (Ур. <span id="up3-level">0</span>/100)</div>
+                        <div id="up3-lock-msg" class="text-[9px] text-amber-400 font-semibold mt-0.5 hidden">🔒 Требуется Турбина 50 ур.</div>
+                    </div>
+                    <button id="up3-btn" onclick="buyUpgrade(3)" class="bg-cyan-600 hover:bg-cyan-500 disabled:bg-slate-800 disabled:text-slate-500 disabled:cursor-not-allowed text-xs px-3 py-1.5 rounded-lg font-bold transition active:scale-95">
+                        <span id="up3-cost">10000</span> ⚡
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ВКЛАДКА 2: Склад -->
+        <div id="tab-workshop" class="hidden flex-col flex-1 space-y-3">
+            <h2 class="text-xs font-bold text-slate-400 uppercase tracking-wider">Модернизация аккумуляторов</h2>
+            <div class="bg-slate-900 p-4 rounded-2xl border border-slate-800 space-y-4">
+                <div class="text-xs text-slate-300">Увеличивает максимальный объем хранимой энергии.</div>
+                <div class="bg-slate-950 p-3 rounded-xl border border-slate-800 space-y-2 text-xs">
+                    <div class="flex justify-between"><span>Текущий лимит:</span><span id="current-storage-val" class="text-cyan-400 font-bold">1000 ⚡</span></div>
+                    <div class="flex justify-between"><span>Следующий лимит:</span><span id="next-storage-val" class="text-amber-400 font-bold">5000 ⚡</span></div>
+                    <div class="flex justify-between"><span>Стоимость:</span><span id="storage-cost-val" class="text-red-400 font-bold">500 ⚡</span></div>
+                </div>
+                <button onclick="upgradeStorage()" id="storage-btn" class="w-full bg-amber-600 hover:bg-amber-500 disabled:bg-slate-800 disabled:text-slate-500 text-xs font-bold py-3 rounded-xl transition active:scale-95">
+                    Улучшить склад
+                </button>
+            </div>
+        </div>
+
+        <!-- ВКЛАДКА 3: Гипер -->
+        <div id="tab-hyper" class="hidden flex-col flex-1 space-y-3">
+            <div class="flex justify-between items-center">
+                <h2 class="text-xs font-bold text-purple-400 uppercase tracking-wider">Гипер-технологии</h2>
+                <span id="hyper-status-badge" class="text-[9px] bg-purple-900/60 border border-purple-500 text-purple-300 px-2 py-0.5 rounded-full font-bold">АКТИВНО</span>
+            </div>
+            
+            <div id="hyper-locked-msg" class="hidden bg-slate-900/90 p-6 rounded-2xl border border-purple-900/40 text-center space-y-2">
+                <div class="text-3xl">🔒</div>
+                <div class="text-xs font-bold text-purple-300">Сектор заблокирован</div>
+                <div class="text-[11px] text-slate-400">Требуется прокачать Ионный ускоритель хотя бы до 50 уровня и накопить <span class="text-cyan-400 font-bold">50,000 ⚡</span>.</div>
+            </div>
+
+            <div id="hyper-content" class="space-y-2.5">
+                <div class="bg-slate-900 p-3 rounded-2xl border border-purple-900/50 flex justify-between items-center">
+                    <div>
+                        <div class="text-xs font-bold text-purple-300">🌌 Сингулярное ядро</div>
+                        <div class="text-[10px] text-slate-400">+25% ко всему EPS (Ур. <span id="hyper1-level">0</span>)</div>
+                    </div>
+                    <button onclick="buyHyper(1)" id="hyper1-btn" class="bg-purple-700 hover:bg-purple-600 disabled:bg-slate-800 disabled:text-slate-500 text-xs px-3 py-1.5 rounded-lg font-bold transition active:scale-95">
+                        <span id="hyper1-cost">50000</span> ⚡
+                    </button>
+                </div>
+
+                <div class="bg-slate-900 p-3 rounded-2xl border border-purple-900/50 flex justify-between items-center">
+                    <div>
+                        <div class="text-xs font-bold text-purple-300">⚛️ Квантовый накопитель</div>
+                        <div class="text-[10px] text-slate-400">+5% от EPS к силе клика (Ур. <span id="hyper2-level">0</span>)</div>
+                    </div>
+                    <button onclick="buyHyper(2)" id="hyper2-btn" class="bg-purple-700 hover:bg-purple-600 disabled:bg-slate-800 disabled:text-slate-500 text-xs px-3 py-1.5 rounded-lg font-bold transition active:scale-95">
+                        <span id="hyper2-cost">150000</span> ⚡
+                    </button>
+                </div>
+
+                <div class="bg-slate-900 p-3.5 rounded-2xl border border-purple-900/50 space-y-2">
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <div class="text-xs font-bold text-cyan-300">⚡ Перегрузка сети</div>
+                            <div class="text-[10px] text-slate-400">x5 EPS на 10 сек (+2 ⭐ Престижа)</div>
+                        </div>
+                        <span id="overload-timer-badge" class="text-[9px] bg-slate-950 text-slate-400 px-2 py-0.5 rounded font-mono">Готово</span>
+                    </div>
+                    <button onclick="activateOverload()" id="overload-btn" class="w-full bg-gradient-to-r from-cyan-600 to-purple-600 hover:from-cyan-500 text-xs font-bold py-2 rounded-xl transition shadow-lg active:scale-95">
+                        Активировать
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ВКЛАДКА 4: Ачивки -->
+        <div id="tab-achievements" class="hidden flex-col flex-1 space-y-3">
+            <h2 class="text-xs font-bold text-amber-400 uppercase tracking-wider">Успехи и Награды</h2>
+            <div id="achievements-list" class="space-y-2.5 max-h-72 overflow-y-auto pr-1"></div>
+        </div>
+
+    </main>
+
+    <!-- Подвал -->
+    <nav class="fixed bottom-0 left-0 right-0 max-w-md mx-auto bg-slate-900 border-t border-slate-800 flex justify-around p-2 z-30">
+        <button onclick="switchTab('generator')" id="nav-generator" class="flex-1 py-2 text-[10px] font-bold text-cyan-400 border-b-2 border-cyan-400">Станция</button>
+        <button onclick="switchTab('workshop')" id="nav-workshop" class="flex-1 py-2 text-[10px] font-bold text-slate-400 border-b-2 border-transparent">Склад</button>
+        <button onclick="switchTab('hyper')" id="nav-hyper" class="flex-1 py-2 text-[10px] font-bold text-slate-400 border-b-2 border-transparent">Гипер</button>
+        <button onclick="switchTab('achievements')" id="nav-achievements" class="flex-1 py-2 text-[10px] font-bold text-slate-400 border-b-2 border-transparent relative">
+            Успехи
+            <span id="ach-badge" class="absolute top-1 right-2 w-2 h-2 bg-red-500 rounded-full hidden"></span>
+        </button>
+    </nav>
+
+    <script>
+        let game = {
+            energy: 0,
+            totalEnergyEarned: 0,
+            prestige: 0,
+            maxStorage: 1000,
+            storageLevel: 0,
+            clickPower: 1,
+            baseEps: 0,
+            eps: 0,
+            lastSaveTime: Date.now(),
+            clickCounterForPrestige: 0,
+            upgrades: {
+                1: { level: 0, cost: 15, baseCost: 15, mult: 1.12, maxLevel: 100 },
+                2: { level: 0, cost: 500, baseCost: 500, mult: 1.14, maxLevel: 100 },
+                3: { level: 0, cost: 10000, baseCost: 10000, mult: 1.16, maxLevel: 100 }
+            },
+            hyper: {
+                1: { level: 0, cost: 50000, baseCost: 50000 },
+                2: { level: 0, cost: 150000, baseCost: 150000 }
+            },
+            overload: {
+                active: false,
+                durationLeft: 0,
+                cooldownLeft: 0
+            },
+            stats: {
+                totalClicks: 0,
+                overloadsActivated: 0
+            },
+            achievements: {
+                clicks: { tier: 1, step: 100, reward: 80, prestigeReward: 3, progress: 0, claimed: false, title: "Запитка реактора (клики)" },
+                earned: { tier: 1, step: 1000, reward: 150, prestigeReward: 4, progress: 0, claimed: false, title: "Генерация энергии" },
+                upgrades: { tier: 1, step: 10, reward: 100, prestigeReward: 3, progress: 0, claimed: false, title: "Турбо-модернизация" },
+                overload: { tier: 1, step: 2, reward: 200, prestigeReward: 5, progress: 0, claimed: false, title: "Мастер Перегрузки" }
+            }
+        };
+
+        const storageCosts = [500, 2500, 15000, 100000, 500000];
+        const storageCaps = [1000, 5000, 25000, 150000, 1000000];
+
+        function loadGame() {
+            const saved = localStorage.getItem('power_station_save_v5');
+            if (saved) {
+                try { 
+                    const parsed = JSON.parse(saved);
+                    game = Object.assign({}, game, parsed); 
+                } catch(e) {}
+            }
+
+            recalc();
+
+            const now = Date.now();
+            const deltaSeconds = Math.floor((now - (game.lastSaveTime || now)) / 1000);
+            
+            if (deltaSeconds > 10 && game.eps > 0) {
+                const potentialEnergy = deltaSeconds * game.eps;
+                const actualAdded = Math.min(game.maxStorage - game.energy, potentialEnergy);
+                
+                if (actualAdded > 0) {
+                    game.energy = Math.min(game.maxStorage, game.energy + actualAdded);
+                    game.totalEnergyEarned = (game.totalEnergyEarned || 0) + actualAdded;
+                    
+                    document.getElementById('offline-time').innerText = formatTime(deltaSeconds);
+                    document.getElementById('offline-energy').innerText = '+' + Math.floor(actualAdded) + ' ⚡';
+                    document.getElementById('offline-modal').classList.remove('hidden');
+                }
+            }
+
+            game.lastSaveTime = Date.now();
+            updateAchievementProgress();
+            updateUI();
+        }
+
+        function saveGame() {
+            game.lastSaveTime = Date.now();
+            localStorage.setItem('power_station_save_v5', JSON.stringify(game));
+        }
+
+        function recalc() {
+            game.baseEps = (game.upgrades[2].level * 3) + (game.upgrades[3].level * 20);
+            let hyperMult = 1 + (game.hyper[1].level * 0.25);
+            let overloadMult = game.overload.active ? 5 : 1;
+
+            game.eps = game.baseEps * hyperMult * overloadMult;
+
+            let quantumBonus = Math.floor(game.eps * (game.hyper[2].level * 0.05));
+            game.clickPower = 1 + game.upgrades[1].level + quantumBonus;
+
+            let totalUpgrades = game.upgrades[1].level + game.upgrades[2].level + game.upgrades[3].level;
+            document.getElementById('station-level').innerText = 'Уровень ' + (1 + Math.floor(totalUpgrades / 5));
+
+            updateAchievementProgress();
+        }
+
+        const target = document.getElementById('clicker-target');
+        target.addEventListener('click', function(e) {
+            let added = Math.min(game.maxStorage - game.energy, game.clickPower);
+            if (added > 0) {
+                game.energy += added;
+                game.totalEnergyEarned = (game.totalEnergyEarned || 0) + added;
+            }
+
+            game.stats.totalClicks++;
+            game.clickCounterForPrestige++;
+
+            if (game.clickCounterForPrestige >= 100) {
+                game.clickCounterForPrestige -= 100;
+                game.prestige += 1;
+                showToast("⭐ Престиж повышен!", "+1 Престижа за 100 кликов");
+            }
+
+            const icon = document.getElementById('target-icon');
+            icon.style.transform = 'scale(1.3) rotate(10deg)';
+            setTimeout(() => icon.style.transform = 'scale(1) rotate(0deg)', 100);
+            
+            const rect = target.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            const el = document.createElement('div');
+            el.className = 'floating-text text-xs';
+            el.innerText = '+' + game.clickPower;
+            el.style.left = x + 'px';
+            el.style.top = y + 'px';
+            target.appendChild(el);
+            setTimeout(() => el.remove(), 700);
+
+            updateAchievementProgress();
+            updateUI();
+        });
+
+        function buyUpgrade(id) {
+            let up = game.upgrades[id];
+            if (up.level >= up.maxLevel) return;
+
+            if (id === 2 && game.upgrades[1].level < 50) return;
+            if (id === 3 && game.upgrades[2].level < 50) return;
+
+            if (game.energy >= up.cost) {
+                game.energy -= up.cost;
+                up.level++;
+                up.cost = Math.floor(up.baseCost * Math.pow(up.mult, up.level));
+                recalc();
+                saveGame();
+                updateUI();
+            }
+        }
+
+        function buyHyper(id) {
+            let h = game.hyper[id];
+            if (game.energy >= h.cost) {
+                game.energy -= h.cost;
+                h.level++;
+                h.cost = Math.floor(h.baseCost * Math.pow(1.5, h.level));
+                recalc();
+                saveGame();
+                updateUI();
+            }
+        }
+
+        function activateOverload() {
+            if (!game.overload.active && game.overload.cooldownLeft <= 0) {
+                game.overload.active = true;
+                game.overload.durationLeft = 10;
+                game.overload.cooldownLeft = 45;
+                game.stats.overloadsActivated++;
+                game.prestige += 2;
+
+                target.classList.add('overload-active');
+                document.getElementById('overload-banner').classList.remove('hidden');
+                
+                showToast("⚡ ПЕРЕГРУЗКА (+2 ⭐)!", "Доход x5 на 10 секунд!");
+                recalc();
+                saveGame();
+                updateUI();
+            }
+        }
+
+        function upgradeStorage() {
+            if (game.storageLevel < storageCosts.length) {
+                let cost = storageCosts[game.storageLevel];
+                if (game.energy >= cost) {
+                    game.energy -= cost;
+                    game.storageLevel++;
+                    game.maxStorage = storageCaps[game.storageLevel];
+                    saveGame();
+                    updateUI();
+                }
+            }
+        }
+
+        function updateAchievementProgress() {
+            game.achievements.clicks.progress = game.stats.totalClicks;
+            game.achievements.earned.progress = Math.floor(game.totalEnergyEarned);
+            game.achievements.upgrades.progress = game.upgrades[1].level + game.upgrades[2].level + game.upgrades[3].level;
+            game.achievements.overload.progress = game.stats.overloadsActivated;
+
+            let hasUnclaimed = Object.keys(game.achievements).some(k => {
+                let a = game.achievements[k];
+                return !a.claimed && a.progress >= a.step;
+            });
+            const badge = document.getElementById('ach-badge');
+            if (hasUnclaimed) badge.classList.remove('hidden');
+            else badge.classList.add('hidden');
+        }
+
+        function claimAchievement(key) {
+            let a = game.achievements[key];
+            if (!a.claimed && a.progress >= a.step) {
+                a.claimed = true;
+                game.energy += a.reward;
+                game.prestige += a.prestigeReward;
+                
+                confetti({ particleCount: 50, spread: 50, origin: { y: 0.6 } });
+                showToast(`🎁 Награда забрана!`, `+${a.reward} ⚡ и +${a.prestigeReward} ⭐`);
+
+                setTimeout(() => {
+                    a.tier++;
+                    a.step = Math.floor(a.step * 2.0);
+                    a.reward = Math.floor(a.reward * 1.8);
+                    a.prestigeReward += 2;
+                    a.claimed = false;
+                    renderAchievements();
+                }, 200);
+                saveGame();
+                updateUI();
+            }
+        }
+
+        function renderAchievements() {
+            updateAchievementProgress();
+            const list = document.getElementById('achievements-list');
+            list.innerHTML = '';
+            
+            Object.keys(game.achievements).forEach(key => {
+                let a = game.achievements[key];
+                let ready = a.progress >= a.step && !a.claimed;
+                let percent = Math.min(100, Math.floor((a.progress / a.step) * 100));
+
+                const el = document.createElement('div');
+                el.className = `p-3 rounded-2xl border flex flex-col gap-2 ${ready ? 'bg-slate-900 border-yellow-500/60 shadow-[0_0_15px_rgba(234,179,8,0.2)]' : 'bg-slate-950 border-slate-800'}`;
+                el.innerHTML = `
+                    <div class="flex justify-between items-center">
+                        <span class="text-xs font-bold text-yellow-300">${a.title} (Этап ${a.tier})</span>
+                        <span class="text-[10px] text-yellow-400 font-orbitron">+${a.reward} ⚡ | +${a.prestigeReward} ⭐</span>
+                    </div>
+                    <div class="flex justify-between text-[10px] text-slate-400">
+                        <span>Прогресс: ${a.progress} / ${a.step}</span>
+                        <span>${percent}%</span>
+                    </div>
+                    <div class="w-full bg-slate-900 h-1.5 rounded-full overflow-hidden">
+                        <div class="bg-yellow-400 h-full transition-all duration-300" style="width: ${percent}%"></div>
+                    </div>
+                    <button onclick="claimAchievement('${key}')" ${!ready ? 'disabled class="w-full bg-slate-800/50 text-slate-500 text-xs py-1.5 rounded-xl font-bold cursor-not-allowed"' : 'class="w-full bg-gradient-to-r from-yellow-500 to-amber-600 text-slate-950 text-xs py-1.5 rounded-xl font-bold active:scale-95 transition shadow-md"'}>
+                        ${a.claimed ? '✅ Забрано' : (ready ? '🎁 Забрать награду' : '🔒 В процессе')}
+                    </button>
+                `;
+                list.appendChild(el);
+            });
+        }
+
+        function showToast(title, msg) {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            toast.className = 'toast bg-slate-900/95 border border-cyan-500/80 p-3 rounded-2xl glow-box flex items-center gap-3 pointer-events-auto';
+            toast.innerHTML = `
+                <div class="text-xs">
+                    <div class="font-bold text-cyan-300">${title}</div>
+                    <div class="text-[10px] text-slate-400">${msg}</div>
+                </div>
+            `;
+            container.appendChild(toast);
+            setTimeout(() => toast.remove(), 3500);
+        }
+
+        function switchTab(tabName) {
+            ['generator', 'workshop', 'hyper', 'achievements'].forEach(t => {
+                let el = document.getElementById('tab-' + t);
+                let nav = document.getElementById('nav-' + t);
+                if (t === tabName) {
+                    el.classList.remove('hidden');
+                    el.classList.add('flex');
+                    nav.className = "flex-1 py-2 text-[10px] font-bold text-cyan-400 border-b-2 border-cyan-400 relative";
+                } else {
+                    el.classList.add('hidden');
+                    el.classList.remove('flex');
+                    nav.className = "flex-1 py-2 text-[10px] font-bold text-slate-400 border-b-2 border-transparent relative";
+                }
+            });
+            if (tabName === 'achievements') renderAchievements();
+        }
+
+        function closeOfflineModal() {
+            document.getElementById('offline-modal').classList.add('hidden');
+        }
+
+        function formatTime(sec) {
+            if (sec < 60) return sec + ' сек';
+            let min = Math.floor(sec / 60);
+            if (min < 60) return min + ' мин';
+            let hrs = Math.floor(min / 60);
+            return hrs + ' ч ' + (min % 60) + ' мин';
+        }
+
+        function updateUI() {
+            document.getElementById('energy-display').innerText = Math.floor(game.energy);
+            document.getElementById('prestige-display').innerText = game.prestige;
+            document.getElementById('eps-display').innerText = game.eps.toFixed(1);
+            document.getElementById('click-power-display').innerText = `(+${game.clickPower}/клик)`;
+            
+            let percent = Math.min(100, (game.energy / game.maxStorage) * 100);
+            document.getElementById('storage-bar').style.width = percent + '%';
+            document.getElementById('storage-text').innerText = Math.floor(game.energy) + ' / ' + game.maxStorage;
+
+            const up1 = game.upgrades[1];
+            const up1Btn = document.getElementById('up1-btn');
+            document.getElementById('up1-level').innerText = up1.level;
+            if (up1.level >= up1.maxLevel) {
+                up1Btn.innerText = 'МАКС';
+                up1Btn.disabled = true;
+            } else {
+                document.getElementById('up1-cost').innerText = up1.cost;
+                up1Btn.disabled = game.energy < up1.cost;
+            }
+
+            const up2 = game.upgrades[2];
+            const up2Btn = document.getElementById('up2-btn');
+            const up2LockMsg = document.getElementById('up2-lock-msg');
+            document.getElementById('up2-level').innerText = up2.level;
+
+            if (up1.level < 50) {
+                up2LockMsg.classList.remove('hidden');
+                up2LockMsg.innerText = `🔒 Требуется Обмотка 50 ур. (${up1.level}/50)`;
+                up2Btn.innerText = 'Заблокировано';
+                up2Btn.disabled = true;
+            } else {
+                up2LockMsg.classList.add('hidden');
+                if (up2.level >= up2.maxLevel) {
+                    up2Btn.innerText = 'МАКС';
+                    up2Btn.disabled = true;
+                } else {
+                    up2Btn.innerHTML = `<span id="up2-cost">${up2.cost}</span> ⚡`;
+                    up2Btn.disabled = game.energy < up2.cost;
+                }
+            }
+
+            const up3 = game.upgrades[3];
+            const up3Btn = document.getElementById('up3-btn');
+            const up3LockMsg = document.getElementById('up3-lock-msg');
+            document.getElementById('up3-level').innerText = up3.level;
+
+            if (up2.level < 50) {
+                up3LockMsg.classList.remove('hidden');
+                up3LockMsg.innerText = `🔒 Требуется Турбина 50 ур. (${up2.level}/50)`;
+                up3Btn.innerText = 'Заблокировано';
+                up3Btn.disabled = true;
+            } else {
+                up3LockMsg.classList.add('hidden');
+                if (up3.level >= up3.maxLevel) {
+                    up3Btn.innerText = 'МАКС';
+                    up3Btn.disabled = true;
+                } else {
+                    up3Btn.innerHTML = `<span id="up3-cost">${up3.cost}</span> ⚡`;
+                    up3Btn.disabled = game.energy < up3.cost;
+                }
+            }
+
+            const isHyperUnlocked = game.upgrades[3].level >= 50 && (game.totalEnergyEarned >= 50000 || game.energy >= 50000);
+            const hyperLockedMsg = document.getElementById('hyper-locked-msg');
+            const hyperContent = document.getElementById('hyper-content');
+            const hyperBadge = document.getElementById('hyper-status-badge');
+
+            if (isHyperUnlocked) {
+                hyperLockedMsg.classList.add('hidden');
+                hyperContent.classList.remove('opacity-30', 'pointer-events-none');
+                hyperBadge.innerText = "ДОСТУПНО";
+                hyperBadge.className = "text-[9px] bg-purple-900/60 border border-purple-500 text-purple-300 px-2 py-0.5 rounded-full font-bold";
+            } else {
+                hyperLockedMsg.classList.remove('hidden');
+                hyperContent.classList.add('opacity-30', 'pointer-events-none');
+                hyperBadge.innerText = "ЗАБЛОКИРОВАНО";
+                hyperBadge.className = "text-[9px] bg-slate-800 border border-slate-700 text-slate-500 px-2 py-0.5 rounded-full font-bold";
+            }
+
+            document.getElementById('hyper1-level').innerText = game.hyper[1].level;
+            document.getElementById('hyper1-cost').innerText = game.hyper[1].cost;
+            document.getElementById('hyper1-btn').disabled = game.energy < game.hyper[1].cost;
+
+            document.getElementById('hyper2-level').innerText = game.hyper[2].level;
+            document.getElementById('hyper2-cost').innerText = game.hyper[2].cost;
+            document.getElementById('hyper2-btn').disabled = game.energy < game.hyper[2].cost;
+
+            const ovBtn = document.getElementById('overload-btn');
+            const ovBadge = document.getElementById('overload-timer-badge');
+            if (game.overload.active) {
+                ovBtn.disabled = true;
+                ovBtn.innerText = `Активно (${game.overload.durationLeft}s)`;
+                ovBadge.innerText = "⚡ РАБОТАЕТ";
+                ovBadge.className = "text-[9px] bg-cyan-900 text-cyan-300 px-2 py-0.5 rounded font-mono animate-pulse";
+            } else if (game.overload.cooldownLeft > 0) {
+                ovBtn.disabled = true;
+                ovBtn.innerText = `Перезарядка (${game.overload.cooldownLeft}s)`;
+                ovBadge.innerText = `Кулдаун: ${game.overload.cooldownLeft}s`;
+                ovBadge.className = "text-[9px] bg-slate-800 text-slate-400 px-2 py-0.5 rounded font-mono";
+            } else {
+                ovBtn.disabled = false;
+                ovBtn.innerText = "Активировать";
+                ovBadge.innerText = "Готово";
+                ovBadge.className = "text-[9px] bg-emerald-950 text-emerald-400 border border-emerald-800 px-2 py-0.5 rounded font-mono";
+            }
+
+            if (game.storageLevel < storageCosts.length) {
+                document.getElementById('current-storage-val').innerText = game.maxStorage + ' ⚡';
+                document.getElementById('next-storage-val').innerText = storageCaps[game.storageLevel + 1] + ' ⚡';
+                document.getElementById('storage-cost-val').innerText = storageCosts[game.storageLevel] + ' ⚡';
+                document.getElementById('storage-btn').innerText = 'Улучшить склад (' + storageCosts[game.storageLevel] + ' ⚡)';
+                document.getElementById('storage-btn').disabled = game.energy < storageCosts[game.storageLevel];
+            } else {
+                document.getElementById('current-storage-val').innerText = game.maxStorage + ' ⚡ (МАКС)';
+                document.getElementById('next-storage-val').innerText = 'Предел';
+                document.getElementById('storage-cost-val').innerText = '-';
+                document.getElementById('storage-btn').innerText = 'Максимальный уровень склада';
+                document.getElementById('storage-btn').disabled = true;
+            }
+        }
+
+        setInterval(function() {
+            if (game.eps > 0) {
+                let added = game.eps / 10;
+                if (game.energy < game.maxStorage) {
+                    let actualAdded = Math.min(game.maxStorage - game.energy, added);
+                    game.energy += actualAdded;
+                    game.totalEnergyEarned = (game.totalEnergyEarned || 0) + actualAdded;
+                }
+                updateUI();
+            }
+        }, 100);
+
+        setInterval(function() {
+            let changed = false;
+            if (game.overload.active) {
+                game.overload.durationLeft--;
+                if (game.overload.durationLeft <= 0) {
+                    game.overload.active = false;
+                    target.classList.remove('overload-active');
+                    document.getElementById('overload-banner').classList.add('hidden');
+                    showToast("⚡ Перегрузка завершена", "Генератор вернулся к штатному режиму.");
+                }
+                changed = true;
+            } else if (game.overload.cooldownLeft > 0) {
+                game.overload.cooldownLeft--;
+                changed = true;
+            }
+
+            if (changed) {
+                recalc();
+                updateUI();
+            }
+        }, 1000);
+
+        setInterval(saveGame, 3000);
+
+        window.onload = loadGame;
+    </script>
+</body>
+</html>

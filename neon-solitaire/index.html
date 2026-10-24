@@ -1,0 +1,777 @@
+<!DOCTYPE html>
+<html lang="ru" class="h-full bg-slate-950 text-slate-100 select-none">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Neon Match 3D Solitaire</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Canvas Confetti -->
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        neonCyan: '#00f3ff',
+                        neonPink: '#ff007f',
+                        neonYellow: '#ffea00',
+                        neonPurple: '#b500ff',
+                        neonGreen: '#00ff66',
+                        darkBg: '#090d16',
+                        cardBg: '#121826',
+                    },
+                    boxShadow: {
+                        'neon-cyan': '0 0 15px rgba(0, 243, 255, 0.4), inset 0 0 10px rgba(0, 243, 255, 0.2)',
+                        'neon-pink': '0 0 15px rgba(255, 0, 127, 0.4), inset 0 0 10px rgba(255, 0, 127, 0.2)',
+                        'neon-gold': '0 0 15px rgba(255, 234, 0, 0.4), inset 0 0 10px rgba(255, 234, 0, 0.2)',
+                        'neon-green': '0 0 15px rgba(0, 255, 102, 0.4), inset 0 0 10px rgba(0, 255, 102, 0.2)',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Inter:wght@400;600;700&display=swap');
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            touch-action: manipulation;
+            overscroll-behavior: none;
+            background-color: #070a12;
+            background-image: 
+                radial-gradient(circle at 50% 0%, rgba(0, 243, 255, 0.08) 0%, transparent 60%),
+                radial-gradient(circle at 50% 100%, rgba(181, 0, 255, 0.08) 0%, transparent 60%);
+        }
+
+        .font-orbitron {
+            font-family: 'Orbitron', sans-serif;
+        }
+
+        .card-3d {
+            transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+            transform-style: preserve-3d;
+        }
+
+        .card-active {
+            cursor: pointer;
+            filter: brightness(1.1);
+        }
+
+        .card-active:hover {
+            transform: translateY(-4px) scale(1.03);
+            z-index: 50 !important;
+        }
+
+        .card-active:active {
+            transform: scale(0.96);
+        }
+
+        .card-blocked {
+            filter: brightness(0.38) grayscale(0.5);
+            cursor: not-allowed;
+            opacity: 0.85;
+        }
+
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: rgba(15, 23, 42, 0.6);
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #00f3ff44;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #00f3ff88;
+        }
+
+        @keyframes slideDown {
+            from { transform: translate(-50%, -100%); opacity: 0; }
+            to { transform: translate(-50%, 0); opacity: 1; }
+        }
+        .toast-anim {
+            animation: slideDown 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+        }
+    </style>
+</head>
+<body class="h-full text-slate-100 flex flex-col justify-between overflow-hidden">
+
+    <div class="w-full max-w-md mx-auto h-[100dvh] flex flex-col justify-between p-3 relative overflow-hidden">
+        
+        <!-- HEADER -->
+        <header class="flex items-center justify-between bg-slate-900/80 backdrop-blur-md border border-slate-800 rounded-2xl px-3 py-2 shadow-lg shrink-0 z-20 gap-1.5">
+            <!-- Кнопка возврата в Хаб -->
+            <a href="../index.html" class="bg-slate-800 hover:bg-slate-700 text-cyan-400 px-2 py-1.5 rounded-xl text-[10px] font-bold transition flex items-center gap-1 active:scale-95 border border-cyan-500/30 shrink-0">
+                <i class="fa-solid fa-arrow-left"></i> На хаб
+            </a>
+
+            <!-- Level info -->
+            <div class="flex flex-col">
+                <span class="text-[9px] uppercase tracking-wider font-bold text-slate-400">Уровень</span>
+                <span id="level-display" class="font-orbitron text-sm font-extrabold text-neonCyan drop-shadow-[0_0_8px_rgba(0,243,255,0.6)]">1 / 100</span>
+            </div>
+
+            <!-- Престиж -->
+            <div class="flex flex-col items-center">
+                <span class="text-[9px] uppercase font-bold text-slate-400">Престиж</span>
+                <span id="prestige-display" class="font-orbitron text-xs font-extrabold text-purple-400">⭐ 0</span>
+            </div>
+
+            <!-- Coins Display -->
+            <div class="flex items-center gap-1.5 bg-slate-950/80 border border-yellow-500/30 px-2.5 py-1 rounded-xl shrink-0">
+                <i class="fa-solid fa-coins text-yellow-400 text-xs animate-pulse"></i>
+                <span id="coins-display" class="font-orbitron font-bold text-yellow-400 text-xs">0</span>
+            </div>
+
+            <!-- Action buttons -->
+            <div class="flex items-center gap-1 shrink-0">
+                <button id="btn-achievements" class="relative bg-slate-800 hover:bg-slate-700 active:scale-95 text-yellow-400 p-2 rounded-xl border border-yellow-500/30 transition flex items-center justify-center text-xs">
+                    <i class="fa-solid fa-trophy"></i>
+                    <span id="achieve-badge" class="hidden absolute -top-1 -right-1 w-2.5 h-2.5 bg-red-500 rounded-full animate-ping"></span>
+                    <span id="achieve-badge-dot" class="hidden absolute -top-1 -right-1 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-slate-900"></span>
+                </button>
+                <button id="btn-restart" class="bg-slate-800 hover:bg-slate-700 active:scale-95 text-slate-300 hover:text-white p-2 rounded-xl border border-slate-700 text-xs transition">
+                    <i class="fa-solid fa-rotate-right"></i>
+                </button>
+            </div>
+        </header>
+
+        <!-- GAME BOARD AREA -->
+        <main id="board-container" class="relative flex-1 my-2 w-full flex items-center justify-center overflow-hidden">
+            <div id="game-board" class="relative w-[340px] h-[380px] max-w-full max-h-full"></div>
+        </main>
+
+        <!-- BOTTOM CONTROLS & TRAY CONTAINER -->
+        <footer class="flex flex-col gap-2 shrink-0 z-20 pb-1">
+            
+            <div class="bg-slate-900/90 backdrop-blur-md border border-cyan-500/30 rounded-2xl p-2 shadow-neon-cyan">
+                <div class="flex justify-between items-center mb-1 px-1">
+                    <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400">Запас карт</span>
+                    <span id="tray-count" class="font-orbitron text-xs font-bold text-neonCyan">0 / 8</span>
+                </div>
+                <div id="tray-grid" class="grid grid-cols-8 gap-1.5 h-14 bg-slate-950/80 rounded-xl p-1 border border-slate-800/80 items-center"></div>
+            </div>
+
+            <div class="grid grid-cols-4 gap-2">
+                <button id="btn-undo" class="group bg-slate-900/90 hover:bg-slate-800 border border-slate-700/80 active:scale-95 rounded-xl p-2 flex flex-col items-center justify-center transition shadow-md relative overflow-hidden">
+                    <div class="flex items-center gap-1 text-cyan-400 group-hover:scale-110 transition"><i class="fa-solid fa-arrow-rotate-left text-sm"></i></div>
+                    <span class="text-[10px] font-bold text-slate-200 mt-0.5">Отмена</span>
+                    <span class="text-[9px] text-yellow-400 font-orbitron font-semibold flex items-center gap-0.5"><i class="fa-solid fa-coins text-[8px]"></i> 50</span>
+                </button>
+
+                <button id="btn-shuffle" class="group bg-slate-900/90 hover:bg-slate-800 border border-slate-700/80 active:scale-95 rounded-xl p-2 flex flex-col items-center justify-center transition shadow-md relative overflow-hidden">
+                    <div class="flex items-center gap-1 text-purple-400 group-hover:scale-110 transition"><i class="fa-solid fa-shuffle text-sm"></i></div>
+                    <span class="text-[10px] font-bold text-slate-200 mt-0.5">Микс</span>
+                    <span class="text-[9px] text-yellow-400 font-orbitron font-semibold flex items-center gap-0.5"><i class="fa-solid fa-coins text-[8px]"></i> 100</span>
+                </button>
+
+                <button id="btn-hint" class="group bg-slate-900/90 hover:bg-slate-800 border border-slate-700/80 active:scale-95 rounded-xl p-2 flex flex-col items-center justify-center transition shadow-md relative overflow-hidden">
+                    <div class="flex items-center gap-1 text-yellow-400 group-hover:scale-110 transition"><i class="fa-solid fa-lightbulb text-sm"></i></div>
+                    <span class="text-[10px] font-bold text-slate-200 mt-0.5">Совет</span>
+                    <span class="text-[9px] text-yellow-400 font-orbitron font-semibold flex items-center gap-0.5"><i class="fa-solid fa-coins text-[8px]"></i> 150</span>
+                </button>
+
+                <button id="btn-clear-slot" class="group bg-slate-900/90 hover:bg-slate-800 border border-slate-700/80 active:scale-95 rounded-xl p-2 flex flex-col items-center justify-center transition shadow-md relative overflow-hidden">
+                    <div class="flex items-center gap-1 text-emerald-400 group-hover:scale-110 transition"><i class="fa-solid fa-wand-magic-sparkles text-sm"></i></div>
+                    <span class="text-[10px] font-bold text-slate-200 mt-0.5">Слот -3</span>
+                    <span class="text-[9px] text-yellow-400 font-orbitron font-semibold flex items-center gap-0.5"><i class="fa-solid fa-coins text-[8px]"></i> 200</span>
+                </button>
+            </div>
+        </footer>
+    </div>
+
+    <!-- MODAL: ACHIEVEMENTS -->
+    <div id="modal-achievements" class="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-slate-900 border border-slate-800 rounded-3xl w-full max-w-md max-h-[85vh] flex flex-col shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+            <div class="p-4 border-b border-slate-800 flex items-center justify-between bg-slate-950/50">
+                <div class="flex items-center gap-2.5">
+                    <div class="p-2 bg-yellow-500/10 border border-yellow-500/30 rounded-xl text-yellow-400">
+                        <i class="fa-solid fa-trophy text-lg"></i>
+                    </div>
+                    <div>
+                        <h2 class="font-orbitron font-bold text-lg text-white">Достижения</h2>
+                        <p class="text-xs text-slate-400">Награды дают монеты и престиж ⭐</p>
+                    </div>
+                </div>
+                <button id="close-achievements" class="text-slate-400 hover:text-white p-2 text-xl"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div id="achievements-list" class="p-4 overflow-y-auto space-y-3 flex-1"></div>
+        </div>
+    </div>
+
+    <!-- MODAL: GAME OVER / WIN -->
+    <div id="modal-gameover" class="fixed inset-0 bg-slate-950/85 backdrop-blur-md z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-slate-900 border border-slate-800 rounded-3xl w-full max-w-sm p-6 text-center shadow-2xl relative overflow-hidden">
+            <div id="gameover-icon" class="w-20 h-20 mx-auto mb-4 rounded-3xl flex items-center justify-center text-4xl shadow-lg"></div>
+            <h3 id="gameover-title" class="font-orbitron font-extrabold text-2xl text-white mb-1">Уровень пройден!</h3>
+            <p id="gameover-subtitle" class="text-xs text-slate-400 mb-5">Отличная работа, все карты совпали.</p>
+
+            <div id="gameover-rewards" class="bg-slate-950/60 border border-slate-800 rounded-2xl p-3 mb-6 flex justify-around items-center">
+                <div class="text-center">
+                    <span class="text-[10px] text-slate-400 block uppercase font-semibold">Награда</span>
+                    <span id="reward-coins" class="font-orbitron font-bold text-yellow-400 text-sm flex items-center justify-center gap-1">+100 <i class="fa-solid fa-coins text-xs"></i></span>
+                </div>
+                <div class="w-px h-8 bg-slate-800"></div>
+                <div class="text-center">
+                    <span class="text-[10px] text-slate-400 block uppercase font-semibold">Престиж</span>
+                    <span id="reward-prestige" class="font-orbitron font-bold text-purple-400 text-sm">+2 ⭐</span>
+                </div>
+            </div>
+
+            <div class="flex gap-3">
+                <button id="btn-next-level" class="flex-1 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-slate-950 font-orbitron font-extrabold py-3 rounded-xl shadow-lg transition active:scale-95">
+                    Далее <i class="fa-solid fa-arrow-right ml-1"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- TOAST NOTIFICATION CONTAINER -->
+    <div id="toast-container" class="fixed top-4 left-1/2 -translate-x-1/2 z-50 pointer-events-none w-full max-w-xs flex flex-col items-center gap-2"></div>
+
+    <!-- GAME LOGIC SCRIPT -->
+    <script>
+        const CARD_TYPES = [
+            { id: 'heart_yellow', icon: 'fa-solid fa-heart', color: '#ffea00', border: 'border-yellow-400', glow: 'shadow-neon-gold' },
+            { id: 'fire_orange', icon: 'fa-solid fa-fire', color: '#ff5500', border: 'border-orange-500', glow: 'shadow-neon-pink' },
+            { id: 'bolt_cyan', icon: 'fa-solid fa-bolt', color: '#00f3ff', border: 'border-cyan-400', glow: 'shadow-neon-cyan' },
+            { id: 'heart_purple', icon: 'fa-solid fa-heart', color: '#b500ff', border: 'border-purple-500', glow: 'shadow-neon-pink' },
+            { id: 'heart_green', icon: 'fa-solid fa-heart', color: '#00ff66', border: 'border-emerald-400', glow: 'shadow-neon-green' },
+            { id: 'heart_blue', icon: 'fa-solid fa-heart', color: '#0077ff', border: 'border-blue-500', glow: 'shadow-neon-cyan' },
+            { id: 'star_pink', icon: 'fa-solid fa-star', color: '#ff007f', border: 'border-pink-500', glow: 'shadow-neon-pink' },
+            { id: 'gem_green', icon: 'fa-solid fa-gem', color: '#00ffaa', border: 'border-teal-400', glow: 'shadow-neon-green' }
+        ];
+
+        let state = {
+            level: 1,
+            coins: 1000,
+            prestige: 0,
+            winStreak: 0,
+            boostersUsedCount: 0,
+            usedBoosterInCurrentLevel: false,
+            cards: [],
+            tray: [],
+            history: [],
+            stats: {
+                totalLevelsCompleted: 0,
+                perfectLevelsCount: 0
+            },
+            achievements: {
+                level: { tier: 1, step: 1, progress: 0, reward: 100, prestigeReward: 2, title: "Прогресс пасьянса", claimed: false },
+                streak: { tier: 1, step: 3, progress: 0, reward: 200, prestigeReward: 4, title: "Неоновый ураган (серия)", claimed: false },
+                booster: { tier: 1, step: 5, progress: 0, reward: 150, prestigeReward: 3, title: "Тактик бустеров", claimed: false },
+                coins: { tier: 1, step: 1000, progress: 0, reward: 300, prestigeReward: 5, title: "Богач (монеты)", claimed: false },
+                perfect: { tier: 1, step: 1, progress: 0, reward: 200, prestigeReward: 4, title: "Чистая победа без бустеров", claimed: false }
+            }
+        };
+
+        window.onload = () => {
+            loadState();
+            setupEventListeners();
+            startLevel(state.level);
+        };
+
+        function loadState() {
+            const saved = localStorage.getItem('neon_solitaire_save_v2');
+            if (saved) {
+                try {
+                    const parsed = JSON.parse(saved);
+                    state.level = parsed.level || 1;
+                    state.coins = parsed.coins !== undefined ? parsed.coins : 1000;
+                    state.prestige = parsed.prestige || 0;
+                    state.winStreak = parsed.winStreak || 0;
+                    state.boostersUsedCount = parsed.boostersUsedCount || 0;
+                    state.stats = parsed.stats || state.stats;
+                    state.achievements = parsed.achievements || state.achievements;
+                } catch (e) {}
+            }
+            updateUI();
+        }
+
+        function saveState() {
+            localStorage.setItem('neon_solitaire_save_v2', JSON.stringify({
+                level: state.level,
+                coins: state.coins,
+                prestige: state.prestige,
+                winStreak: state.winStreak,
+                boostersUsedCount: state.boostersUsedCount,
+                stats: state.stats,
+                achievements: state.achievements
+            }));
+            updateUI();
+        }
+
+        function updateUI() {
+            document.getElementById('level-display').innerText = `${state.level} / 100`;
+            document.getElementById('coins-display').innerText = state.coins;
+            document.getElementById('prestige-display').innerText = `⭐ ${state.prestige}`;
+            document.getElementById('tray-count').innerText = `${state.tray.length} / 8`;
+            checkUnclaimedAchievements();
+        }
+
+        function setupEventListeners() {
+            document.getElementById('btn-restart').onclick = () => startLevel(state.level);
+            document.getElementById('btn-undo').onclick = useBoosterUndo;
+            document.getElementById('btn-shuffle').onclick = useBoosterShuffle;
+            document.getElementById('btn-hint').onclick = useBoosterHint;
+            document.getElementById('btn-clear-slot').onclick = useBoosterClearSlot;
+
+            document.getElementById('btn-achievements').onclick = openAchievementsModal;
+            document.getElementById('close-achievements').onclick = closeAchievementsModal;
+            document.getElementById('btn-next-level').onclick = () => {
+                document.getElementById('modal-gameover').classList.add('hidden');
+                startLevel(state.level);
+            };
+        }
+
+        function startLevel(lvl) {
+            state.history = [];
+            state.tray = [];
+            state.usedBoosterInCurrentLevel = false;
+
+            const board = document.getElementById('game-board');
+            board.innerHTML = '';
+
+            const numTriples = Math.min(4 + Math.floor((lvl - 1) / 2), 12); 
+            const totalCards = numTriples * 3;
+            const availableTypesCount = Math.min(3 + Math.floor(lvl / 3), CARD_TYPES.length);
+            const activeTypes = CARD_TYPES.slice(0, availableTypesCount);
+
+            let cardDeck = [];
+            for (let i = 0; i < numTriples; i++) {
+                const type = activeTypes[i % activeTypes.length];
+                cardDeck.push({ ...type }, { ...type }, { ...type });
+            }
+            cardDeck.sort(() => Math.random() - 0.5);
+
+            state.cards = [];
+            const layers = Math.min(3 + Math.floor(lvl / 4), 5);
+            let cardIndex = 0;
+
+            const boardWidth = board.clientWidth || 320;
+            const boardHeight = board.clientHeight || 360;
+            const cardW = 54;
+            const cardH = 74;
+
+            for (let layer = 0; layer < layers && cardIndex < totalCards; layer++) {
+                const remaining = totalCards - cardIndex;
+                const cardsInLayer = (layer === layers - 1) ? remaining : Math.min(remaining, Math.max(3, 8 - layer));
+                const cols = Math.min(cardsInLayer, 4);
+                const rows = Math.ceil(cardsInLayer / cols);
+
+                const startX = (boardWidth - (cols * (cardW + 10))) / 2 + (layer % 2 === 1 ? 15 : 0);
+                const startY = (boardHeight - (rows * (cardH + 10))) / 2 + (layer * 8) - 10;
+
+                for (let i = 0; i < cardsInLayer && cardIndex < totalCards; i++) {
+                    const col = i % cols;
+                    const row = Math.floor(i / cols);
+
+                    const x = startX + col * (cardW + 10) + (Math.random() * 4 - 2);
+                    const y = startY + row * (cardH + 10) + (Math.random() * 4 - 2);
+
+                    state.cards.push({
+                        id: `card_${cardIndex}`,
+                        typeId: cardDeck[cardIndex].id,
+                        icon: cardDeck[cardIndex].icon,
+                        color: cardDeck[cardIndex].color,
+                        border: cardDeck[cardIndex].border,
+                        glow: cardDeck[cardIndex].glow,
+                        x: Math.max(5, Math.min(boardWidth - cardW - 5, x)),
+                        y: Math.max(5, Math.min(boardHeight - cardH - 5, y)),
+                        layer: layer,
+                        isBlocked: false,
+                        inTray: false
+                    });
+                    cardIndex++;
+                }
+            }
+
+            updateCardOverlap();
+            renderBoard();
+            renderTray();
+            updateUI();
+        }
+
+        function updateCardOverlap() {
+            const cardW = 54;
+            const cardH = 74;
+
+            for (let i = 0; i < state.cards.length; i++) {
+                const cardA = state.cards[i];
+                if (cardA.inTray) continue;
+
+                cardA.isBlocked = false;
+                for (let j = 0; j < state.cards.length; j++) {
+                    const cardB = state.cards[j];
+                    if (cardB.inTray || i === j) continue;
+
+                    if (cardB.layer > cardA.layer) {
+                        const overlapX = Math.abs(cardA.x - cardB.x) < cardW * 0.75;
+                        const overlapY = Math.abs(cardA.y - cardB.y) < cardH * 0.75;
+                        if (overlapX && overlapY) {
+                            cardA.isBlocked = true;
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+
+        function renderBoard() {
+            const board = document.getElementById('game-board');
+            board.innerHTML = '';
+
+            state.cards.filter(c => !c.inTray).forEach(card => {
+                const cardEl = document.createElement('div');
+                cardEl.id = card.id;
+                cardEl.className = `absolute card-3d w-[54px] h-[74px] rounded-xl border-2 bg-slate-900 flex flex-col items-center justify-center shadow-lg transition-all ${
+                    card.isBlocked ? 'card-blocked ' + card.border : 'card-active ' + card.border + ' ' + card.glow
+                }`;
+                
+                cardEl.style.left = `${card.x}px`;
+                cardEl.style.top = `${card.y}px`;
+                cardEl.style.zIndex = card.layer * 10;
+
+                cardEl.innerHTML = `<div class="text-xl" style="color: ${card.color}"><i class="${card.icon}"></i></div>`;
+
+                if (!card.isBlocked) {
+                    cardEl.onclick = () => selectCard(card);
+                }
+                board.appendChild(cardEl);
+            });
+        }
+
+        function renderTray() {
+            const trayGrid = document.getElementById('tray-grid');
+            trayGrid.innerHTML = '';
+
+            for (let i = 0; i < 8; i++) {
+                const slot = document.createElement('div');
+                slot.className = 'w-full h-full rounded-lg bg-slate-900/60 border border-slate-800/80 flex items-center justify-center relative';
+
+                if (state.tray[i]) {
+                    const card = state.tray[i];
+                    slot.innerHTML = `
+                        <div class="w-full h-full rounded-lg border ${card.border} bg-slate-900 flex items-center justify-center ${card.glow} animate-in zoom-in duration-150">
+                            <i class="${card.icon} text-lg" style="color: ${card.color}"></i>
+                        </div>
+                    `;
+                }
+                trayGrid.appendChild(slot);
+            }
+            updateUI();
+        }
+
+        function selectCard(card) {
+            if (card.isBlocked || card.inTray || state.tray.length >= 8) return;
+
+            saveHistory();
+            card.inTray = true;
+            state.tray.push(card);
+
+            updateCardOverlap();
+            renderBoard();
+            renderTray();
+
+            setTimeout(() => checkMatch(), 180);
+        }
+
+        function checkMatch() {
+            const counts = {};
+            state.tray.forEach(c => counts[c.typeId] = (counts[c.typeId] || 0) + 1);
+
+            for (const typeId in counts) {
+                if (counts[typeId] >= 3) {
+                    let removed = 0;
+                    state.tray = state.tray.filter(card => {
+                        if (card.typeId === typeId && removed < 3) {
+                            removed++;
+                            return false;
+                        }
+                        return true;
+                    });
+
+                    state.coins += 15;
+                    showToast('+15 Монет!', 'yellow');
+                    renderTray();
+                    checkUnclaimedAchievements();
+                    break;
+                }
+            }
+
+            const remainingOnBoard = state.cards.filter(c => !c.inTray).length;
+            if (remainingOnBoard === 0 && state.tray.length === 0) {
+                handleWin();
+            } else if (state.tray.length >= 8) {
+                handleGameOver();
+            }
+        }
+
+        function saveHistory() {
+            state.history.push({
+                cards: JSON.parse(JSON.stringify(state.cards)),
+                tray: JSON.parse(JSON.stringify(state.tray))
+            });
+            if (state.history.length > 5) state.history.shift();
+        }
+
+        function registerBoosterUse(cost) {
+            if (state.coins < cost) {
+                showToast('Недостаточно монет!', 'red');
+                return false;
+            }
+            state.coins -= cost;
+            state.boostersUsedCount++;
+            state.usedBoosterInCurrentLevel = true;
+            addAchievementProgress('booster', 1);
+            saveState();
+            return true;
+        }
+
+        function useBoosterUndo() {
+            if (state.history.length === 0) return showToast('Нет ходов!', 'gray');
+            if (!registerBoosterUse(50)) return;
+
+            const previous = state.history.pop();
+            state.cards = previous.cards;
+            state.tray = previous.tray;
+
+            updateCardOverlap();
+            renderBoard();
+            renderTray();
+            showToast('Ход отменен', 'cyan');
+        }
+
+        function useBoosterShuffle() {
+            const activeCards = state.cards.filter(c => !c.inTray);
+            if (activeCards.length < 2) return;
+            if (!registerBoosterUse(100)) return;
+
+            saveHistory();
+            const positions = activeCards.map(c => ({ x: c.x, y: c.y, layer: c.layer }));
+            positions.sort(() => Math.random() - 0.5);
+
+            activeCards.forEach((card, idx) => {
+                card.x = positions[idx].x;
+                card.y = positions[idx].y;
+                card.layer = positions[idx].layer;
+            });
+
+            updateCardOverlap();
+            renderBoard();
+            showToast('Карты перемешаны!', 'purple');
+        }
+
+        function useBoosterHint() {
+            const unblocked = state.cards.filter(c => !c.inTray && !c.isBlocked);
+            if (unblocked.length === 0) return;
+
+            let targetCard = null;
+            const trayTypeCounts = {};
+            state.tray.forEach(c => trayTypeCounts[c.typeId] = (trayTypeCounts[c.typeId] || 0) + 1);
+
+            for (const card of unblocked) {
+                if (trayTypeCounts[card.typeId]) { targetCard = card; break; }
+            }
+            if (!targetCard) targetCard = unblocked[0];
+
+            if (!registerBoosterUse(150)) return;
+
+            const el = document.getElementById(targetCard.id);
+            if (el) {
+                el.classList.add('ring-4', 'ring-yellow-300', 'scale-125', 'z-50');
+                setTimeout(() => el.classList.remove('ring-4', 'ring-yellow-300', 'scale-125', 'z-50'), 2000);
+            }
+            showToast('Подсказка!', 'yellow');
+        }
+
+        function useBoosterClearSlot() {
+            if (state.tray.length === 0) {
+                showToast('Запас пуст!', 'gray');
+                return;
+            }
+            if (!registerBoosterUse(200)) return;
+
+            saveHistory();
+            const removedFromTray = state.tray.splice(0, Math.min(3, state.tray.length));
+            const removedIds = new Set(removedFromTray.map(c => c.id));
+            state.cards = state.cards.filter(c => !removedIds.has(c.id));
+
+            updateCardOverlap();
+            renderBoard();
+            renderTray();
+            showToast('Слот очищен!', 'emerald');
+        }
+
+        function handleWin() {
+            confetti({ particleCount: 80, spread: 60, origin: { y: 0.6 } });
+
+            state.winStreak++;
+            state.stats.totalLevelsCompleted++;
+            if (!state.usedBoosterInCurrentLevel) {
+                state.stats.perfectLevelsCount++;
+            }
+
+            const levelReward = 100 + state.level * 10;
+            const prestigeReward = 2;
+            state.coins += levelReward;
+            state.prestige += prestigeReward;
+
+            // Накапливаем корректный прогресс по ачивкам
+            addAchievementProgress('level', 1);
+            addAchievementProgress('streak', 1);
+            if (!state.usedBoosterInCurrentLevel) {
+                addAchievementProgress('perfect', 1);
+            }
+
+            document.getElementById('gameover-icon').className = 'w-20 h-20 mx-auto mb-4 rounded-3xl flex items-center justify-center text-4xl shadow-lg bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 shadow-neon-green';
+            document.getElementById('gameover-icon').innerHTML = '<i class="fa-solid fa-trophy"></i>';
+            document.getElementById('gameover-title').innerText = 'Уровень пройден!';
+            document.getElementById('gameover-subtitle').innerText = 'Превосходная игра!';
+            document.getElementById('reward-coins').innerHTML = `+${levelReward} <i class="fa-solid fa-coins text-xs"></i>`;
+            document.getElementById('reward-prestige').innerHTML = `+${prestigeReward} ⭐`;
+
+            state.level++;
+            saveState();
+
+            document.getElementById('modal-gameover').classList.remove('hidden');
+        }
+
+        function handleGameOver() {
+            state.winStreak = 0;
+            saveState();
+
+            document.getElementById('gameover-icon').className = 'w-20 h-20 mx-auto mb-4 rounded-3xl flex items-center justify-center text-4xl shadow-lg bg-red-500/20 text-red-400 border border-red-500/30 shadow-neon-pink';
+            document.getElementById('gameover-icon').innerHTML = '<i class="fa-solid fa-heart-crack"></i>';
+            document.getElementById('gameover-title').innerText = 'Запас переполнен!';
+            document.getElementById('gameover-subtitle').innerText = 'Нет свободного места в слотах.';
+            document.getElementById('reward-coins').innerHTML = `0 <i class="fa-solid fa-coins text-xs"></i>`;
+            document.getElementById('reward-prestige').innerHTML = `0 ⭐`;
+
+            document.getElementById('modal-gameover').classList.remove('hidden');
+        }
+
+        function addAchievementProgress(key, amount = 1) {
+            if (state.achievements[key]) {
+                state.achievements[key].progress += amount;
+                checkUnclaimedAchievements();
+            }
+        }
+
+        function checkUnclaimedAchievements() {
+            if (state.achievements.coins) {
+                state.achievements.coins.progress = state.coins;
+            }
+
+            let hasUnclaimed = Object.keys(state.achievements).some(k => {
+                let a = state.achievements[k];
+                return !a.claimed && a.progress >= a.step;
+            });
+            const badge = document.getElementById('achieve-badge');
+            const dot = document.getElementById('achieve-badge-dot');
+            if (hasUnclaimed) {
+                if (badge) badge.classList.remove('hidden');
+                if (dot) dot.classList.remove('hidden');
+            } else {
+                if (badge) badge.classList.add('hidden');
+                if (dot) dot.classList.add('hidden');
+            }
+        }
+
+        function claimAchievementReward(key) {
+            let a = state.achievements[key];
+
+            if (!a.claimed && a.progress >= a.step) {
+                a.claimed = true;
+                state.coins += a.reward;
+                state.prestige += a.prestigeReward;
+                
+                confetti({ particleCount: 50, spread: 50, origin: { y: 0.6 } });
+                showToast(`🎁 Награда: +${a.reward} 🪙 и +${a.prestigeReward} ⭐`, 'yellow');
+
+                setTimeout(() => {
+                    a.progress -= a.step; // Снимаем затраченный порог, оставляя хвост прогресса
+                    a.tier++;
+                    a.step = Math.floor(a.step * 1.8);
+                    a.reward = Math.floor(a.reward * 1.5);
+                    a.prestigeReward += 2;
+                    a.claimed = false;
+                    renderAchievementsList();
+                }, 200);
+                saveState();
+            }
+        }
+
+        function openAchievementsModal() {
+            checkUnclaimedAchievements();
+            renderAchievementsList();
+            document.getElementById('modal-achievements').classList.remove('hidden');
+        }
+
+        function closeAchievementsModal() {
+            document.getElementById('modal-achievements').classList.add('hidden');
+        }
+
+        function renderAchievementsList() {
+            const container = document.getElementById('achievements-list');
+            container.innerHTML = '';
+
+            if (state.achievements.coins) {
+                state.achievements.coins.progress = state.coins;
+            }
+
+            Object.keys(state.achievements).forEach(key => {
+                let a = state.achievements[key];
+                let ready = a.progress >= a.step && !a.claimed;
+                let percent = Math.min(100, Math.floor((a.progress / a.step) * 100));
+
+                const el = document.createElement('div');
+                el.className = `p-3 rounded-2xl border flex flex-col gap-2 ${ready ? 'bg-slate-900 border-yellow-500/60 shadow-[0_0_15px_rgba(234,179,8,0.2)]' : 'bg-slate-950 border-slate-800'}`;
+                el.innerHTML = `
+                    <div class="flex justify-between items-center">
+                        <span class="text-xs font-bold text-yellow-300">${a.title} (Этап ${a.tier})</span>
+                        <span class="text-[10px] text-yellow-400 font-orbitron">+${a.reward} 🪙 | +${a.prestigeReward} ⭐</span>
+                    </div>
+                    <div class="flex justify-between text-[10px] text-slate-400">
+                        <span>Прогресс: ${a.progress} / ${a.step}</span>
+                        <span>${percent}%</span>
+                    </div>
+                    <div class="w-full bg-slate-900 h-1.5 rounded-full overflow-hidden">
+                        <div class="bg-yellow-400 h-full transition-all duration-300" style="width: ${percent}%"></div>
+                    </div>
+                    <button onclick="claimAchievementReward('${key}')" ${!ready ? 'disabled class="w-full bg-slate-800/50 text-slate-500 text-xs py-1.5 rounded-xl font-bold cursor-not-allowed"' : 'class="w-full bg-gradient-to-r from-yellow-500 to-amber-600 text-slate-950 text-xs py-1.5 rounded-xl font-bold active:scale-95 transition shadow-md"'}>
+                        ${ready ? '🎁 Забрать награду' : '🔒 В процессе'}
+                    </button>
+                `;
+                container.appendChild(el);
+            });
+        }
+
+        function showToast(msg, type = 'cyan') {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            const colorMap = {
+                cyan: 'border-cyan-500/50 text-cyan-300',
+                yellow: 'border-yellow-500/50 text-yellow-300',
+                purple: 'border-purple-500/50 text-purple-300',
+                emerald: 'border-emerald-500/50 text-emerald-300',
+                red: 'border-red-500/50 text-red-300',
+                gray: 'border-slate-700 text-slate-300'
+            };
+
+            toast.className = `toast-anim bg-slate-900/95 border ${colorMap[type] || colorMap.cyan} px-4 py-2 rounded-2xl text-xs font-semibold shadow-lg backdrop-blur-md flex items-center gap-2`;
+            toast.innerHTML = `<i class="fa-solid fa-circle-info"></i> ${msg}`;
+
+            container.appendChild(toast);
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                setTimeout(() => toast.remove(), 300);
+            }, 2000);
+        }
+    </script>
+</body>
+</html>

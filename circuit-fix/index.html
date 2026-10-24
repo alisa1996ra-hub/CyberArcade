@@ -1,0 +1,612 @@
+<!DOCTYPE html>
+<html lang="ru" class="h-full bg-slate-950 text-slate-100 select-none">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Электромонтаж: Сборка цепи</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Inter:wght@400;600&display=swap');
+        body { font-family: 'Inter', sans-serif; touch-action: manipulation; }
+        .font-orbitron { font-family: 'Orbitron', sans-serif; }
+        
+        .pipe-tile { transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1); }
+        .pipe-tile:active { transform: scale(0.92); }
+        
+        .powered-line { stroke: #00f3ff !important; filter: drop-shadow(0px 0px 6px #00f3ff); }
+        .powered-bg { box-shadow: 0 0 15px rgba(0, 243, 255, 0.35), inset 0 0 10px rgba(0, 243, 255, 0.2); border-color: #00f3ff !important; }
+
+        @keyframes pulseAlert { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.6; transform: scale(1.05); } }
+        .timer-danger { animation: pulseAlert 0.8s infinite; color: #ef4444 !important; border-color: rgba(239, 68, 68, 0.4) !important; background-color: rgba(239, 68, 68, 0.1); }
+
+        @keyframes slideIn { from { transform: translateY(-30px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+        .toast { animation: slideIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
+    </style>
+</head>
+<body class="h-full flex flex-col justify-between p-3 max-w-md mx-auto overflow-hidden relative">
+
+    <div id="toast-container" class="fixed top-4 left-1/2 transform -translate-x-1/2 w-11/12 max-w-md z-50 flex flex-col gap-2 pointer-events-none"></div>
+
+    <!-- Шапка -->
+    <header class="flex items-center justify-between bg-slate-900/90 border border-slate-800 rounded-2xl px-3 py-2 shadow-lg shrink-0 z-10 gap-1.5">
+        <!-- Кнопка возврата в Хаб -->
+        <a href="../index.html" class="bg-slate-800 hover:bg-slate-700 text-cyan-400 px-2 py-1.5 rounded-xl text-[10px] font-bold transition flex items-center gap-1 active:scale-95 border border-cyan-500/30 shrink-0">
+            <i class="fa-solid fa-arrow-left"></i> На хаб
+        </a>
+
+        <div>
+            <span class="text-[9px] uppercase font-bold text-slate-400 block">Уровень</span>
+            <span id="level-display" class="font-orbitron text-xs font-extrabold text-cyan-400">1</span>
+        </div>
+
+        <!-- Престиж -->
+        <div class="flex flex-col items-center">
+            <span class="text-[9px] uppercase font-bold text-slate-400">Престиж</span>
+            <span id="prestige-display" class="font-orbitron text-xs font-extrabold text-purple-400">⭐ 0</span>
+        </div>
+
+        <!-- Таймер -->
+        <div id="timer-box" class="flex items-center gap-1 bg-slate-950 border border-cyan-500/30 px-2 py-1 rounded-xl transition-all">
+            <i id="timer-icon" class="fa-solid fa-clock text-cyan-400 text-[10px]"></i>
+            <span id="timer-display" class="font-orbitron font-bold text-cyan-300 text-xs">03:00</span>
+        </div>
+
+        <div class="flex items-center gap-1 bg-slate-950 border border-yellow-500/30 px-2 py-1 rounded-xl shrink-0">
+            <i class="fa-solid fa-coins text-yellow-400 text-xs"></i>
+            <span id="coins-display" class="font-orbitron font-bold text-yellow-400 text-xs">150</span>
+        </div>
+
+        <div class="flex items-center gap-1 shrink-0">
+            <button onclick="openAchievements()" class="bg-slate-800 hover:bg-slate-700 active:scale-95 text-yellow-400 p-2 rounded-xl border border-yellow-500/30 text-xs transition relative">
+                <i class="fa-solid fa-trophy"></i>
+                <span id="ach-badge" class="absolute -top-1 -right-1 w-2.5 h-2.5 bg-red-500 rounded-full hidden"></span>
+            </button>
+            <button id="btn-restart" class="bg-slate-800 hover:bg-slate-700 active:scale-95 text-slate-300 p-2 rounded-xl border border-slate-700 text-xs transition">
+                <i class="fa-solid fa-rotate-right"></i>
+            </button>
+        </div>
+    </header>
+
+    <!-- Игровое поле -->
+    <main class="flex-1 flex flex-col items-center justify-center relative my-1">
+        <div id="board-container" class="bg-slate-900/80 border border-slate-800 p-3 rounded-3xl shadow-2xl backdrop-blur-md relative">
+            <div id="grid" class="grid gap-2 relative"></div>
+            
+            <div id="start-overlay" class="absolute inset-0 bg-slate-950/90 backdrop-blur-sm rounded-3xl flex flex-col items-center justify-center p-6 z-30 text-center">
+                <div class="text-3xl mb-2">🔌</div>
+                <h3 class="font-orbitron font-bold text-sm text-cyan-400 mb-1">Схема подготовлена</h3>
+                <p class="text-[11px] text-slate-400 mb-4">Нажмите кнопку, когда будете готовы начать монтаж и запустить таймер.</p>
+                <button onclick="startPlaying()" class="bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-slate-950 font-orbitron font-extrabold px-6 py-3 rounded-xl text-xs uppercase tracking-wider shadow-lg transition active:scale-95">
+                    ▶ Начать монтаж
+                </button>
+            </div>
+        </div>
+    </main>
+
+    <!-- Подвал / Бустеры -->
+    <footer class="bg-slate-900/90 border border-slate-800 rounded-2xl p-2.5 shrink-0 flex items-center justify-around z-10 gap-2">
+        <button onclick="useAddTime()" class="flex-1 bg-slate-800/90 hover:bg-slate-800 border border-cyan-500/30 active:scale-95 rounded-xl p-2 flex flex-col items-center justify-center transition">
+            <span class="text-cyan-400 text-xs font-bold"><i class="fa-solid fa-stopwatch"></i> +30 сек</span>
+            <span id="cost-time" class="text-[9px] text-yellow-400 font-orbitron mt-0.5">35 🪙</span>
+        </button>
+        
+        <button onclick="activateCrossMode()" id="btn-cross-mode" class="flex-1 bg-slate-800/90 hover:bg-slate-800 border border-purple-500/30 active:scale-95 rounded-xl p-2 flex flex-col items-center justify-center transition">
+            <span class="text-purple-400 text-xs font-bold"><i class="fa-solid fa-wand-magic-sparkles"></i> Крестовина</span>
+            <span id="cost-cross" class="text-[9px] text-yellow-400 font-orbitron mt-0.5">65 🪙</span>
+        </button>
+    </footer>
+
+    <!-- МОДАЛКА: ПОБЕДА -->
+    <div id="win-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-slate-900 border border-cyan-500/40 rounded-3xl p-6 text-center max-w-xs w-full shadow-2xl">
+            <div class="w-16 h-16 mx-auto mb-3 bg-cyan-500/20 border border-cyan-400/50 rounded-2xl flex items-center justify-center text-cyan-300 text-3xl shadow-lg">
+                ⚡
+            </div>
+            <h2 class="font-orbitron font-bold text-lg text-white mb-1">Цепь замкнута!</h2>
+            <p class="text-xs text-slate-400 mb-4">Все потребители запитаны вовремя.</p>
+            <div class="bg-slate-950 p-2.5 rounded-xl border border-slate-800 mb-5 flex justify-around items-center">
+                <div>
+                    <span class="text-[10px] text-slate-400 block font-semibold">Награда</span>
+                    <span id="reward-display" class="font-orbitron font-bold text-yellow-400 text-sm">+50 🪙</span>
+                </div>
+                <div class="w-px h-6 bg-slate-800"></div>
+                <div>
+                    <span class="text-[10px] text-slate-400 block font-semibold">Престиж</span>
+                    <span id="win-prestige-display" class="font-orbitron font-bold text-purple-400 text-sm">+2 ⭐</span>
+                </div>
+            </div>
+            <button onclick="nextLevel()" class="w-full bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-slate-950 font-bold py-2.5 rounded-xl text-xs uppercase tracking-wider transition active:scale-95 shadow-lg">
+                Следующая схема <i class="fa-solid fa-arrow-right ml-1"></i>
+            </button>
+        </div>
+    </div>
+
+    <!-- МОДАЛКА: ПРОИГРЫШ -->
+    <div id="gameover-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-slate-900 border border-red-500/40 rounded-3xl p-6 text-center max-w-xs w-full shadow-2xl">
+            <div class="w-16 h-16 mx-auto mb-3 bg-red-500/20 border border-red-400/50 rounded-2xl flex items-center justify-center text-red-400 text-3xl shadow-lg">
+                ⌛
+            </div>
+            <h2 class="font-orbitron font-bold text-lg text-white mb-1">Время вышло!</h2>
+            <p class="text-xs text-slate-400 mb-5">Монтаж не завершен вовремя. Попробуйте еще раз.</p>
+            <button onclick="restartLevel()" class="w-full bg-slate-800 hover:bg-slate-700 text-white font-bold py-2.5 rounded-xl text-xs uppercase tracking-wider transition active:scale-95 border border-slate-700">
+                Повторить попытку
+            </button>
+        </div>
+    </div>
+
+    <!-- МОДАЛКА: ДОСТИЖЕНИЯ -->
+    <div id="achievements-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-slate-900 border border-slate-800 rounded-3xl w-full max-w-md max-h-[85vh] flex flex-col shadow-2xl overflow-hidden">
+            <div class="p-4 border-b border-slate-800 flex items-center justify-between bg-slate-950/50">
+                <div class="flex items-center gap-2.5">
+                    <div class="p-2 bg-yellow-500/10 border border-yellow-500/30 rounded-xl text-yellow-400"><i class="fa-solid fa-trophy text-base"></i></div>
+                    <div><h2 class="font-orbitron font-bold text-base text-white">Достижения</h2><p class="text-[11px] text-slate-400">Награды дают монеты и престиж ⭐</p></div>
+                </div>
+                <button onclick="closeAchievements()" class="text-slate-400 hover:text-white p-2 text-lg"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div id="achievements-list" class="p-4 overflow-y-auto space-y-2.5 flex-1"></div>
+        </div>
+    </div>
+
+    <script>
+        const TILE_TYPES = {
+            STRAIGHT: { connections: [1, 0, 1, 0], svg: '<path d="M 25 0 L 25 50" stroke="#475569" stroke-width="8" fill="none" class="line-path"/>' },
+            CORNER:   { connections: [1, 1, 0, 0], svg: '<path d="M 25 0 L 25 25 L 50 25" stroke="#475569" stroke-width="8" fill="none" class="line-path"/>' },
+            TEE:      { connections: [1, 1, 0, 1], svg: '<path d="M 25 0 L 25 25 M 0 25 L 50 25" stroke="#475569" stroke-width="8" fill="none" class="line-path"/>' },
+            CROSS:    { connections: [1, 1, 1, 1], svg: '<path d="M 25 0 L 25 50 M 0 25 L 50 25" stroke="#475569" stroke-width="8" fill="none" class="line-path"/>' }
+        };
+
+        let state = {
+            level: 1,
+            coins: 150,
+            prestige: 0,
+            gridSize: 4,
+            grid: [],
+            sources: [],
+            targets: [],
+            isPlaying: false,
+            timeLeft: 180,
+            timerInterval: null,
+            crossModeActive: false,
+            stats: {
+                currentStreak: 0,
+                totalLevelsCompleted: 0,
+                timersUsedCount: 0,
+                crossBoughtCount: 0,
+                totalPlayTimeSeconds: 0
+            },
+            achievements: {
+                streak: { tier: 1, step: 5, reward: 80, prestigeReward: 3, titleBase: "Серия побед подряд", claimed: false },
+                totalLvl: { tier: 1, step: 10, reward: 150, prestigeReward: 5, titleBase: "Опытный монтаж", claimed: false },
+                timers: { tier: 1, step: 3, reward: 70, prestigeReward: 2, titleBase: "Запас времени", claimed: false },
+                crosses: { tier: 1, step: 2, reward: 90, prestigeReward: 3, titleBase: "Инженерный апгрейд", claimed: false },
+                playtime: { tier: 1, step: 300, reward: 100, prestigeReward: 4, titleBase: "Время на объекте", claimed: false }
+            }
+        };
+
+        function init() {
+            loadState();
+            setupLevelConfig();
+            renderGrid();
+
+            setInterval(() => {
+                if (state.isPlaying) {
+                    state.stats.totalPlayTimeSeconds++;
+                    checkAchievements();
+                }
+            }, 1000);
+        }
+
+        function loadState() {
+            const saved = localStorage.getItem('circuit_fix_save_v6');
+            if (saved) {
+                try {
+                    const parsed = JSON.parse(saved);
+                    state.level = parsed.level || 1;
+                    state.coins = parsed.coins !== undefined ? parsed.coins : 150;
+                    state.prestige = parsed.prestige || 0;
+                    state.stats = parsed.stats || state.stats;
+                    state.achievements = parsed.achievements || state.achievements;
+                } catch(e){}
+            }
+            updateUI();
+        }
+
+        function saveState() {
+            localStorage.setItem('circuit_fix_save_v6', JSON.stringify({
+                level: state.level,
+                coins: state.coins,
+                prestige: state.prestige,
+                stats: state.stats,
+                achievements: state.achievements
+            }));
+            updateUI();
+        }
+
+        function updateUI() {
+            document.getElementById('level-display').innerText = state.level;
+            document.getElementById('coins-display').innerText = state.coins;
+            document.getElementById('prestige-display').innerText = `⭐ ${state.prestige}`;
+            
+            let addTimeCost = 35 + Math.floor(state.level / 5) * 10;
+            let crossCost = 65 + Math.floor(state.level / 5) * 15;
+            document.getElementById('cost-time').innerText = `${addTimeCost} 🪙`;
+            document.getElementById('cost-cross').innerText =`${crossCost} 🪙`;
+            
+            checkUnclaimedAchievements();
+        }
+
+        function getBaseTime() {
+            let reduction = Math.floor((state.level - 1) / 10) * 10;
+            return Math.max(90, 180 - reduction);
+        }
+
+        function getLevelReward() {
+            let penalty = Math.floor((state.level - 1) / 10) * 8;
+            return Math.max(20, 60 - penalty);
+        }
+
+        function setupLevelConfig() {
+            clearInterval(state.timerInterval);
+            state.isPlaying = false;
+            state.timeLeft = getBaseTime();
+            updateTimerDisplay();
+
+            document.getElementById('win-modal').classList.add('hidden');
+            document.getElementById('gameover-modal').classList.add('hidden');
+            document.getElementById('start-overlay').classList.remove('hidden');
+
+            state.gridSize = state.level >= 5 ? 5 : 4;
+            const size = state.gridSize;
+
+            state.sources = [{ r: 0, c: 0 }];
+            state.targets = state.level >= 3 ? [{ r: size - 1, c: size - 1 }, { r: 0, c: size - 1 }] : [{ r: size - 1, c: size - 1 }];
+            if (state.level >= 10) state.targets.push({ r: size - 1, c: 0 });
+
+            state.grid = [];
+            const pool = [TILE_TYPES.STRAIGHT, TILE_TYPES.CORNER, TILE_TYPES.TEE];
+
+            for (let r = 0; r < size; r++) {
+                state.grid[r] = [];
+                for (let c = 0; c < size; c++) {
+                    let t = pool[Math.floor(Math.random() * pool.length)];
+                    if (state.level >= 8 && Math.random() < 0.08) t = TILE_TYPES.CROSS;
+                    const correctRot = Math.floor(Math.random() * 4) * 90;
+                    state.grid[r][c] = { type: t, rotation: correctRot, correctRotation: correctRot, isPowered: false };
+                }
+            }
+
+            for (let r = 0; r < size; r++) {
+                for (let c = 0; c < size; c++) {
+                    const tile = state.grid[r][c];
+                    const wrongRotations = [90, 180, 270];
+                    tile.rotation = (tile.correctRotation + wrongRotations[Math.floor(Math.random() * wrongRotations.length)]) % 360;
+                }
+            }
+        }
+
+        function startPlaying() {
+            document.getElementById('start-overlay').classList.add('hidden');
+            state.isPlaying = true;
+            
+            state.timerInterval = setInterval(() => {
+                if (!state.isPlaying) return;
+                state.timeLeft--;
+                updateTimerDisplay();
+                if (state.timeLeft <= 0) {
+                    clearInterval(state.timerInterval);
+                    state.isPlaying = false;
+                    state.stats.currentStreak = 0;
+                    saveState();
+                    document.getElementById('gameover-modal').classList.remove('hidden');
+                }
+            }, 1000);
+
+            checkCircuit();
+        }
+
+        function updateTimerDisplay() {
+            let m = Math.floor(state.timeLeft / 60);
+            let s = state.timeLeft % 60;
+            document.getElementById('timer-display').innerText = `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+
+            const timerBox = document.getElementById('timer-box');
+            if (state.timeLeft < 60) {
+                timerBox.classList.add('timer-danger');
+            } else {
+                timerBox.classList.remove('timer-danger');
+            }
+        }
+
+        function renderGrid() {
+            const gridEl = document.getElementById('grid');
+            const size = state.gridSize;
+            gridEl.className = `grid gap-2 relative grid-cols-${size}`;
+            gridEl.style.gridTemplateColumns = `repeat(${size}, minmax(0, 1fr))`;
+            gridEl.innerHTML = '';
+
+            const tileSize = size === 4 ? 'w-16 h-16' : 'w-13 h-13';
+
+            for (let r = 0; r < size; r++) {
+                for (let c = 0; c < size; c++) {
+                    const tile = state.grid[r][c];
+                    const isSource = state.sources.some(s => s.r === r && s.c === c);
+                    const isTarget = state.targets.some(t => t.r === r && t.c === c);
+
+                    const tileEl = document.createElement('div');
+                    tileEl.className = `pipe-tile ${tileSize} rounded-2xl bg-slate-950 border-2 border-slate-800 flex items-center justify-center cursor-pointer relative overflow-hidden ${tile.isPowered ? 'powered-bg' : ''}`;
+
+                    let badges = '';
+                    if (isSource) badges += '<span class="absolute top-0.5 left-1 text-[9px] text-cyan-400 font-bold z-10">⚡ ВРУ</span>';
+                    if (isTarget) badges += '<span class="absolute bottom-0.5 right-1 text-[9px] text-yellow-400 font-bold z-10">💡 220V</span>';
+
+                    tileEl.innerHTML = `${badges}<svg viewBox="0 0 50 50" class="w-full h-full p-2 transition-transform duration-200" style="transform: rotate(${tile.rotation}deg)">${tile.type.svg}</svg>`;
+
+                    const path = tileEl.querySelector('.line-path');
+                    if (path) {
+                        if (tile.isPowered) path.classList.add('powered-line');
+                        else { path.classList.remove('powered-line'); path.setAttribute('stroke', '#475569'); }
+                    }
+
+                    tileEl.onclick = () => {
+                        if (!state.isPlaying) return;
+                        if (state.crossModeActive) {
+                            applyCrossBooster(r, c);
+                        } else {
+                            rotateTile(r, c);
+                        }
+                    };
+                    gridEl.appendChild(tileEl);
+                }
+            }
+        }
+
+        function rotateTile(r, c) {
+            state.grid[r][c].rotation = (state.grid[r][c].rotation + 90) % 360;
+            renderGrid();
+            checkCircuit();
+        }
+
+        function getRotatedConnections(tile) {
+            const steps = (tile.rotation / 90) % 4;
+            const conn = tile.type.connections;
+            const res = [0, 0, 0, 0];
+            for (let i = 0; i < 4; i++) res[(i + steps) % 4] = conn[i];
+            return res;
+        }
+
+        function checkCircuit() {
+            const size = state.gridSize;
+            for (let r = 0; r < size; r++) for (let c = 0; c < size; c++) state.grid[r][c].isPowered = false;
+
+            let queue = [];
+            state.sources.forEach(s => {
+                state.grid[s.r][s.c].isPowered = true;
+                queue.push(s);
+            });
+
+            const dirMap = [
+                { dr: -1, dc: 0, oppDir: 2 },
+                { dr: 0, dc: 1, oppDir: 3 },
+                { dr: 1, dc: 0, oppDir: 0 },
+                { dr: 0, dc: -1, oppDir: 1 }
+            ];
+
+            while (queue.length > 0) {
+                const curr = queue.shift();
+                const currTile = state.grid[curr.r][curr.c];
+                const currConn = getRotatedConnections(currTile);
+
+                for (let d = 0; d < 4; d++) {
+                    if (currConn[d] === 1) {
+                        const nr = curr.r + dirMap[d].dr;
+                        const nc = curr.c + dirMap[d].dc;
+                        if (nr >= 0 && nr < size && nc >= 0 && nc < size) {
+                            const nextTile = state.grid[nr][nc];
+                            const nextConn = getRotatedConnections(nextTile);
+                            if (!nextTile.isPowered && nextConn[dirMap[d].oppDir] === 1) {
+                                nextTile.isPowered = true;
+                                queue.push({ r: nr, c: nc });
+                            }
+                        }
+                    }
+                }
+            }
+
+            renderGrid();
+
+            const isWon = state.targets.every(t => state.grid[t.r][t.c].isPowered);
+            if (isWon && state.isPlaying) {
+                state.isPlaying = false;
+                clearInterval(state.timerInterval);
+                setTimeout(handleWin, 250);
+            }
+        }
+
+        function handleWin() {
+            confetti({ particleCount: 70, spread: 60, origin: { y: 0.6 } });
+            const reward = getLevelReward();
+            const prestigeReward = 2;
+            state.coins += reward;
+            state.prestige += prestigeReward;
+            state.stats.totalLevelsCompleted++;
+            state.stats.currentStreak++;
+            checkAchievements();
+            saveState();
+
+            document.getElementById('reward-display').innerText = `+${reward} 🪙`;
+            document.getElementById('win-prestige-display').innerText = `+${prestigeReward} ⭐`;
+            document.getElementById('win-modal').classList.remove('hidden');
+        }
+
+        function nextLevel() {
+            state.level++;
+            saveState();
+            setupLevelConfig();
+            renderGrid();
+        }
+
+        function restartLevel() {
+            setupLevelConfig();
+            renderGrid();
+        }
+
+        function useAddTime() {
+            if (!state.isPlaying) return;
+            let cost = 35 + Math.floor(state.level / 5) * 10;
+            if (state.coins < cost) {
+                showToast("Недостаточно монет!", "red");
+                return;
+            }
+            state.coins -= cost;
+            state.timeLeft += 30;
+            state.stats.timersUsedCount++;
+            checkAchievements();
+            saveState();
+            updateTimerDisplay();
+            showToast("+30 секунд добавлено!", "cyan");
+        }
+
+        function activateCrossMode() {
+            if (!state.isPlaying) return;
+            let cost = 65 + Math.floor(state.level / 5) * 15;
+            if (state.coins < cost) {
+                showToast("Недостаточно монет!", "red");
+                return;
+            }
+            state.crossModeActive = true;
+            document.getElementById('btn-cross-mode').classList.add('border-purple-400', 'bg-purple-950/50');
+            showToast("Кликните на плитку, чтобы сделать её крестовиной", "yellow");
+        }
+
+        function applyCrossBooster(r, c) {
+            let cost = 65 + Math.floor(state.level / 5) * 15;
+            state.coins -= cost;
+            state.crossModeActive = false;
+            document.getElementById('btn-cross-mode').classList.remove('border-purple-400', 'bg-purple-950/50');
+            
+            state.grid[r][c].type = TILE_TYPES.CROSS;
+            state.grid[r][c].rotation = 0;
+            state.grid[r][c].correctRotation = 0;
+            
+            state.stats.crossBoughtCount++;
+            checkAchievements();
+            saveState();
+            renderGrid();
+            checkCircuit();
+            showToast("Установлена крестовина!", "purple");
+        }
+
+        function checkAchievements() {
+            // Автоматически проверяем условия для ачивок (прогресс)
+            updateUI();
+        }
+
+        function claimAchievement(key) {
+            let ach = state.achievements[key];
+            let currentVal = getAchievementCurrentVal(key);
+
+            if (!ach.claimed && currentVal >= ach.step) {
+                ach.claimed = true;
+                state.coins += ach.reward;
+                state.prestige += ach.prestigeReward;
+                
+                confetti({ particleCount: 50, spread: 50, origin: { y: 0.6 } });
+                showToast(`🎁 Награда получена! +${ach.reward} 🪙 и +${ach.prestigeReward} ⭐`, "yellow");
+
+                setTimeout(() => {
+                    ach.tier++;
+                    ach.step = Math.floor(ach.step * 1.5);
+                    ach.reward = Math.floor(ach.reward * 1.4);
+                    ach.prestigeReward += 2;
+                    ach.claimed = false;
+                    openAchievements();
+                }, 200);
+                saveState();
+            }
+        }
+
+        function getAchievementCurrentVal(key) {
+            if (key === 'streak') return state.stats.currentStreak;
+            if (key === 'totalLvl') return state.stats.totalLevelsCompleted;
+            if (key === 'timers') return state.stats.timersUsedCount;
+            if (key === 'crosses') return state.stats.crossBoughtCount;
+            if (key === 'playtime') return state.stats.totalPlayTimeSeconds;
+            return 0;
+        }
+
+        function checkUnclaimedAchievements() {
+            let hasUnclaimed = Object.keys(state.achievements).some(k => {
+                let a = state.achievements[k];
+                return !a.claimed && getAchievementCurrentVal(k) >= a.step;
+            });
+            const badge = document.getElementById('ach-badge');
+            if (badge) {
+                if (hasUnclaimed) badge.classList.remove('hidden');
+                else badge.classList.add('hidden');
+            }
+        }
+
+        function openAchievements() {
+            const list = document.getElementById('achievements-list');
+            list.innerHTML = '';
+            
+            const defs = [
+                { key: 'streak', title: 'Серия побед подряд' },
+                { key: 'totalLvl', title: 'Всего уровней' },
+                { key: 'timers', title: 'Использование таймера' },
+                { key: 'crosses', title: 'Покупка крестовин' },
+                { key: 'playtime', title: 'Время в игре (сек)' }
+            ];
+
+            defs.forEach(item => {
+                let d = state.achievements[item.key];
+                let current = getAchievementCurrentVal(item.key);
+                let ready = current >= d.step && !d.claimed;
+                let percent = Math.min(100, Math.floor((current / d.step) * 100));
+                
+                const el = document.createElement('div');
+                el.className = `p-3 rounded-2xl border flex flex-col gap-2 ${ready ? 'bg-slate-900 border-yellow-500/60 shadow-[0_0_15px_rgba(234,179,8,0.2)]' : 'bg-slate-950 border-slate-800'}`;
+                el.innerHTML = `
+                    <div class="flex justify-between items-center">
+                        <span class="text-xs font-bold text-yellow-300">${item.title} (Этап ${d.tier})</span>
+                        <span class="text-[10px] text-yellow-400 font-orbitron">+${d.reward} 🪙 | +${d.prestigeReward} ⭐</span>
+                    </div>
+                    <div class="flex justify-between text-[10px] text-slate-400">
+                        <span>Прогресс: ${current} / ${d.step}</span>
+                        <span>${percent}%</span>
+                    </div>
+                    <div class="w-full bg-slate-900 h-1.5 rounded-full overflow-hidden">
+                        <div class="bg-yellow-400 h-full transition-all duration-300" style="width: ${percent}%"></div>
+                    </div>
+                    <button onclick="claimAchievement('${item.key}')" ${!ready ? 'disabled class="w-full bg-slate-800/50 text-slate-500 text-xs py-1.5 rounded-xl font-bold cursor-not-allowed"' : 'class="w-full bg-gradient-to-r from-yellow-500 to-amber-600 text-slate-950 text-xs py-1.5 rounded-xl font-bold active:scale-95 transition shadow-md"'}>
+                        ${ready ? '🎁 Забрать награду' : '🔒 В процессе'}
+                    </button>
+                `;
+                list.appendChild(el);
+            });
+
+            document.getElementById('achievements-modal').classList.remove('hidden');
+        }
+
+        function closeAchievements() {
+            document.getElementById('achievements-modal').classList.add('hidden');
+        }
+
+        function showToast(msg, type) {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            toast.className = `toast bg-slate-900 border border-cyan-500/50 text-cyan-300 px-4 py-2 rounded-2xl text-xs font-semibold shadow-lg flex items-center gap-2`;
+            toast.innerHTML = `<i class="fa-solid fa-circle-info"></i> ${msg}`;
+            container.appendChild(toast);
+            setTimeout(() => toast.remove(), 2500);
+        }
+
+        document.getElementById('btn-restart').onclick = restartLevel;
+        window.onload = init;
+    </script>
+</body>
+</html>

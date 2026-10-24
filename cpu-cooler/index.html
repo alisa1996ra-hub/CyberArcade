@@ -1,0 +1,556 @@
+<!DOCTYPE html>
+<html lang="ru" class="h-full bg-slate-950 text-slate-100 select-none">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Разгон кремния: Термобаланс</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Inter:wght@400;600&display=swap');
+        body { font-family: 'Inter', sans-serif; touch-action: manipulation; }
+        .font-orbitron { font-family: 'Orbitron', sans-serif; }
+        
+        @keyframes pulseAlert { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.6; transform: scale(1.04); } }
+        .temp-danger { animation: pulseAlert 0.7s infinite; color: #ef4444 !important; border-color: rgba(239, 68, 68, 0.5) !important; background-color: rgba(239, 68, 68, 0.15); }
+        .temp-cold { color: #38bdf8 !important; border-color: rgba(56, 189, 248, 0.4) !important; background-color: rgba(56, 189, 248, 0.1); }
+
+        @keyframes slideIn { from { transform: translateY(-30px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+        .toast { animation: slideIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
+    </style>
+</head>
+<body class="h-full flex flex-col justify-between p-3 max-w-md mx-auto overflow-hidden relative">
+
+    <div id="toast-container" class="fixed top-4 left-1/2 transform -translate-x-1/2 w-11/12 max-w-md z-50 flex flex-col gap-2 pointer-events-none"></div>
+
+    <!-- Шапка -->
+    <header class="flex items-center justify-between bg-slate-900/90 border border-slate-800 rounded-2xl px-3 py-2 shadow-lg shrink-0 z-10 gap-1.5">
+        <!-- Кнопка возврата в Хаб -->
+        <a href="../index.html" class="bg-slate-800 hover:bg-slate-700 text-cyan-400 px-2 py-1.5 rounded-xl text-[10px] font-bold transition flex items-center gap-1 active:scale-95 border border-cyan-500/30 shrink-0">
+            <i class="fa-solid fa-arrow-left"></i> На хаб
+        </a>
+
+        <div>
+            <span class="text-[9px] uppercase font-bold text-slate-400 block">Хэшрейт</span>
+            <span id="hashrate-display" class="font-orbitron text-xs font-extrabold text-blue-400">10 MH/s</span>
+        </div>
+
+        <!-- Престиж -->
+        <div class="flex flex-col items-center">
+            <span class="text-[9px] uppercase font-bold text-slate-400">Престиж</span>
+            <span id="prestige-display" class="font-orbitron text-xs font-extrabold text-purple-400">⭐ 0</span>
+        </div>
+
+        <!-- Температура -->
+        <div id="temp-box" class="flex items-center gap-1 bg-slate-950 border border-blue-500/30 px-2 py-1 rounded-xl transition-all">
+            <i id="temp-icon" class="fa-solid fa-temperature-half text-blue-400 text-[10px]"></i>
+            <span id="temp-display" class="font-orbitron font-bold text-blue-300 text-xs">60°C</span>
+        </div>
+
+        <div class="flex items-center gap-1 bg-slate-950 border border-yellow-500/30 px-2 py-1 rounded-xl shrink-0">
+            <i class="fa-solid fa-coins text-yellow-400 text-xs"></i>
+            <span id="coins-display" class="font-orbitron font-bold text-yellow-400 text-xs">200</span>
+        </div>
+
+        <div class="flex items-center gap-1 shrink-0">
+            <button onclick="openAchievements()" class="bg-slate-800 hover:bg-slate-700 active:scale-95 text-yellow-400 p-2 rounded-xl border border-yellow-500/30 text-xs transition relative">
+                <i class="fa-solid fa-trophy"></i>
+                <span id="ach-badge" class="absolute -top-1 -right-1 w-2.5 h-2.5 bg-red-500 rounded-full hidden"></span>
+            </button>
+            <button onclick="resetGame()" class="bg-slate-800 hover:bg-slate-700 active:scale-95 text-slate-300 p-2 rounded-xl border border-slate-700 text-xs transition">
+                <i class="fa-solid fa-rotate-right"></i>
+            </button>
+        </div>
+    </header>
+
+    <!-- Главный экран -->
+    <main class="flex-1 flex flex-col justify-between relative my-2 gap-2 overflow-y-auto pr-0.5">
+        
+        <!-- Статус чипа -->
+        <div class="bg-slate-900/90 border border-slate-800 rounded-2xl p-3 flex items-center justify-between shadow-xl relative overflow-hidden">
+            <div class="flex items-center gap-3">
+                <div class="w-12 h-12 rounded-xl bg-blue-500/10 border border-blue-500/30 flex items-center justify-center text-2xl">
+                    💻
+                </div>
+                <div>
+                    <h3 id="status-title" class="font-orbitron font-bold text-xs text-white">Кристалл в норме</h3>
+                    <p id="income-status" class="text-[10px] text-cyan-400">Доход: +2.0 🪙/сек (100%)</p>
+                </div>
+            </div>
+            <div id="mode-badge" class="bg-emerald-950 border border-emerald-500/50 text-emerald-400 text-[9px] font-bold px-2 py-1 rounded-lg">
+                ИДЕАЛ
+            </div>
+        </div>
+
+        <!-- ЦВЕТНАЯ ШКАЛА ТЕМПЕРАТУРЫ СО СТРЕЛОЧКОЙ -->
+        <div class="bg-slate-900 border border-slate-800 p-3 rounded-2xl space-y-1.5">
+            <div class="flex justify-between text-[10px] text-slate-400">
+                <span>Термозоны фермы</span>
+                <span id="heat-balance-text" class="text-cyan-400 font-semibold">+0.0°C/сек</span>
+            </div>
+            
+            <div class="w-full h-4 rounded-lg overflow-hidden flex relative border border-slate-800 shadow-inner">
+                <div class="bg-red-600/70 h-full" style="width: 40%;"></div>
+                <div class="bg-amber-500/70 h-full" style="width: 10%;"></div>
+                <div class="bg-emerald-500 h-full" style="width: 20%;"></div>
+                <div class="bg-amber-500/70 h-full" style="width: 10%;"></div>
+                <div class="bg-red-600/70 h-full" style="width: 20%;"></div>
+
+                <div id="temp-pointer" class="absolute top-0 bottom-0 w-1.5 bg-white shadow-[0_0_8px_white] transition-all duration-300 transform -translate-x-1/2" style="left: 60%;">
+                    <div class="absolute -top-1 left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-[4px] border-l-transparent border-r-[4px] border-r-transparent border-t-[5px] border-t-white"></div>
+                </div>
+            </div>
+
+            <div class="flex justify-between text-[8px] text-slate-400 px-0.5 font-semibold">
+                <span class="text-red-400">Заморозка</span>
+                <span class="text-amber-400">Оптимум</span>
+                <span class="text-emerald-400">ИДЕАЛ (50-70°)</span>
+                <span class="text-amber-400">Оптимум</span>
+                <span class="text-red-400">Троттлинг</span>
+            </div>
+        </div>
+
+        <!-- Магазин оборудования -->
+        <div class="flex-1 bg-slate-900/80 border border-slate-800 rounded-2xl p-2.5 space-y-2 overflow-y-auto">
+            <h4 class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Оборудование & Охлаждение</h4>
+
+            <div class="bg-slate-950 p-2 rounded-xl border border-slate-800 flex justify-between items-center">
+                <div>
+                    <div class="text-xs font-bold text-slate-200">CPU Ryzen (Ур. <span id="cpu-lvl">0</span>)</div>
+                    <div class="text-[10px] text-slate-400">+1.5 🪙/сек | <span class="text-red-400">+1.2°C/сек</span></div>
+                </div>
+                <button onclick="buyHardware('cpu')" class="bg-slate-800 hover:bg-slate-700 border border-slate-700 text-cyan-400 text-xs font-bold px-2.5 py-1.5 rounded-lg transition active:scale-95">
+                    <span id="cost-cpu">40</span> 🪙
+                </button>
+            </div>
+
+            <div class="bg-slate-950 p-2 rounded-xl border border-slate-800 flex justify-between items-center">
+                <div>
+                    <div class="text-xs font-bold text-cyan-300">GPU RTX (Ур. <span id="gpu-lvl">0</span>)</div>
+                    <div class="text-[10px] text-slate-400">+5.0 🪙/сек | <span class="text-red-400">+3.5°C/сек</span></div>
+                </div>
+                <button onclick="buyHardware('gpu')" class="bg-cyan-600 hover:bg-cyan-500 text-slate-950 text-xs font-bold px-2.5 py-1.5 rounded-lg transition active:scale-95">
+                    <span id="cost-gpu">120</span> 🪙
+                </button>
+            </div>
+
+            <div class="bg-slate-950 p-2 rounded-xl border border-slate-800 flex justify-between items-center">
+                <div>
+                    <div class="text-xs font-bold text-purple-300">ASIC Майнер (Ур. <span id="asic-lvl">0</span>)</div>
+                    <div class="text-[10px] text-slate-400">+18.0 🪙/сек | <span class="text-red-400">+11.0°C/сек</span></div>
+                </div>
+                <button onclick="buyHardware('asic')" class="bg-purple-600 hover:bg-purple-500 text-slate-950 text-xs font-bold px-2.5 py-1.5 rounded-lg transition active:scale-95">
+                    <span id="cost-asic">450</span> 🪙
+                </button>
+            </div>
+
+            <div class="bg-slate-950 p-2 rounded-xl border border-slate-800 flex justify-between items-center">
+                <div>
+                    <div class="text-xs font-bold text-blue-300">Воздух Noctua (Ур. <span id="fan-lvl">0</span>)</div>
+                    <div class="text-[10px] text-slate-400">Охлаждение: <span class="text-blue-400">-2.0°C/сек</span></div>
+                </div>
+                <button onclick="buyCooling('fan')" class="bg-blue-600 hover:bg-blue-500 text-slate-950 text-xs font-bold px-2.5 py-1.5 rounded-lg transition active:scale-95">
+                    <span id="cost-fan">50</span> 🪙
+                </button>
+            </div>
+
+            <div class="bg-slate-950 p-2 rounded-xl border border-slate-800 flex justify-between items-center">
+                <div>
+                    <div class="text-xs font-bold text-emerald-300">Водянка СЖО (Ур. <span id="water-lvl">0</span>)</div>
+                    <div class="text-[10px] text-slate-400">Охлаждение: <span class="text-blue-400">-6.5°C/сек</span></div>
+                </div>
+                <button onclick="buyCooling('water')" class="bg-emerald-600 hover:bg-emerald-500 text-slate-950 text-xs font-bold px-2.5 py-1.5 rounded-lg transition active:scale-95">
+                    <span id="cost-water">220</span> 🪙
+                </button>
+            </div>
+
+            <div class="bg-slate-950 p-2 rounded-xl border border-slate-800 flex justify-between items-center">
+                <div>
+                    <div class="text-xs font-bold text-indigo-300">Иммерсионная Ванна (Ур. <span id="oil-lvl">0</span>)</div>
+                    <div class="text-[10px] text-slate-400">Охлаждение: <span class="text-blue-400">-16.0°C/сек</span></div>
+                </div>
+                <button onclick="buyCooling('oil')" class="bg-indigo-600 hover:bg-indigo-500 text-slate-950 text-xs font-bold px-2.5 py-1.5 rounded-lg transition active:scale-95">
+                    <span id="cost-oil">600</span> 🪙
+                </button>
+            </div>
+        </div>
+    </main>
+
+    <!-- Подвал / Бустеры -->
+    <footer class="bg-slate-900/90 border border-slate-800 rounded-2xl p-2 shrink-0 flex items-center justify-around z-10 gap-2">
+        <button onclick="applyThermalPaste()" class="flex-1 bg-slate-800 hover:bg-slate-700 border border-amber-500/30 active:scale-95 rounded-xl p-2 flex flex-col items-center justify-center transition">
+            <span class="text-amber-400 text-xs font-bold"><i class="fa-solid fa-fire text-xs"></i> Разогрев (+20°C)</span>
+            <span class="text-[9px] text-yellow-400 font-orbitron mt-0.5">25 🪙</span>
+        </button>
+        
+        <button onclick="emergencyFlush()" class="flex-1 bg-slate-800 hover:bg-slate-700 border border-blue-500/30 active:scale-95 rounded-xl p-2 flex flex-col items-center justify-center transition">
+            <span class="text-blue-400 text-xs font-bold"><i class="fa-solid fa-snowflake text-xs"></i> Фреон (-30°C)</span>
+            <span class="text-[9px] text-yellow-400 font-orbitron mt-0.5">45 🪙</span>
+        </button>
+    </footer>
+
+    <!-- МОДАЛКА: РЕМОНТ (100°C) -->
+    <div id="repair-modal" class="fixed inset-0 bg-slate-950/90 backdrop-blur-md z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-slate-900 border border-red-500/50 rounded-3xl p-6 text-center max-w-xs w-full shadow-2xl">
+            <div class="w-16 h-16 mx-auto mb-3 bg-red-500/20 border border-red-400/50 rounded-2xl flex items-center justify-center text-red-400 text-3xl shadow-lg">
+                💥
+            </div>
+            <h2 class="font-orbitron font-bold text-lg text-white mb-1">ЧИП СГОРЕЛ!</h2>
+            <p class="text-xs text-slate-400 mb-3">Превышен предел в 100°C. Идет ремонт текстолита.</p>
+            
+            <div class="bg-slate-950 p-3 rounded-xl border border-slate-800 mb-4">
+                <span class="text-xs text-slate-400 block mb-1">До окончания ремонта:</span>
+                <span id="repair-timer" class="font-orbitron font-bold text-xl text-red-400">30 сек</span>
+            </div>
+
+            <button onclick="speedupRepair()" class="w-full bg-gradient-to-r from-amber-500 to-yellow-600 text-slate-950 font-bold py-2.5 rounded-xl text-xs uppercase tracking-wider transition active:scale-95 shadow-lg">
+                Ускорить ремонт (100 🪙)
+            </button>
+        </div>
+    </div>
+
+    <!-- МОДАЛКА: ДОСТИЖЕНИЯ -->
+    <div id="achievements-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-slate-900 border border-slate-800 rounded-3xl w-full max-w-md max-h-[85vh] flex flex-col shadow-2xl overflow-hidden">
+            <div class="p-4 border-b border-slate-800 flex items-center justify-between bg-slate-950/50">
+                <div class="flex items-center gap-2.5">
+                    <div class="p-2 bg-yellow-500/10 border border-yellow-500/30 rounded-xl text-yellow-400"><i class="fa-solid fa-trophy text-base"></i></div>
+                    <div><h2 class="font-orbitron font-bold text-base text-white">Достижения</h2><p class="text-[11px] text-slate-400">Награды дают монеты и престиж ⭐</p></div>
+                </div>
+                <button onclick="closeAchievements()" class="text-slate-400 hover:text-white p-2 text-lg"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div id="achievements-list" class="p-4 overflow-y-auto space-y-2.5 flex-1"></div>
+        </div>
+    </div>
+
+    <script>
+        let game = {
+            coins: 200,
+            prestige: 0,
+            temp: 60,
+            maxTemp: 100,
+            isBurnedOut: false,
+            repairTimeLeft: 0,
+            repairInterval: null,
+            stats: {
+                totalCoinsMined: 0,
+                perfectZoneSeconds: 0,
+                totalPlaySeconds: 0,
+                maxHashrate: 5,
+                pasteUsed: 0,
+                freonUsed: 0
+            },
+            hardware: {
+                cpu: { level: 0, cost: 40, income: 1.5, heat: 1.2 },
+                gpu: { level: 0, cost: 120, income: 5.0, heat: 3.5 },
+                asic: { level: 0, cost: 450, income: 18.0, heat: 11.0 }
+            },
+            cooling: {
+                fan: { level: 0, cost: 50, cold: 2.0 },
+                water: { level: 0, cost: 220, cold: 6.5 },
+                oil: { level: 0, cost: 600, cold: 16.0 }
+            },
+            achievements: {
+                perfect: { tier: 1, step: 120, reward: 100, prestigeReward: 3, progress: 0, claimed: false, title: "Идеальный разгон (сек в зоне 50-70°)" },
+                uptime: { tier: 1, step: 300, reward: 120, prestigeReward: 4, progress: 0, claimed: false, title: "Аптайм фермы (сек)" },
+                mined: { tier: 1, step: 500, reward: 150, prestigeReward: 5, progress: 0, claimed: false, title: "Добыто монет" },
+                hash: { tier: 1, step: 50, reward: 200, prestigeReward: 6, progress: 0, claimed: false, title: "Максимальный хэшрейт (MH/s)" },
+                maintenance: { tier: 1, step: 5, reward: 90, prestigeReward: 2, progress: 0, claimed: false, title: "Обслуживание (паста/фреон)" }
+            }
+        };
+
+        function init() {
+            loadGame();
+
+            setInterval(() => {
+                if (game.isBurnedOut) return;
+
+                game.stats.totalPlaySeconds++;
+
+                let heatProd = (game.hardware.cpu.level * game.hardware.cpu.heat) + 
+                               (game.hardware.gpu.level * game.hardware.gpu.heat) + 
+                               (game.hardware.asic.level * game.hardware.asic.heat);
+
+                let coolProd = (game.cooling.fan.level * game.cooling.fan.cold) + 
+                               (game.cooling.water.level * game.cooling.water.cold) + 
+                               (game.cooling.oil.level * game.cooling.oil.cold) + 0.2;
+
+                let netHeat = heatProd - coolProd;
+                game.temp = Math.max(10, Math.min(game.maxTemp, game.temp + (netHeat / 10)));
+
+                let eff = 1.0;
+                let modeText = "ИДЕАЛ";
+                let modeClass = "bg-emerald-950 border-emerald-500/50 text-emerald-400";
+
+                if (game.temp < 40) {
+                    eff = 0.5;
+                    modeText = "❄️ ЗАМОРОЗКА (-50%)";
+                    modeClass = "bg-sky-950 border-sky-500/50 text-sky-400";
+                } else if (game.temp >= 40 && game.temp < 50) {
+                    eff = 0.8;
+                    modeText = "⚡ ОПТИМУМ (-20%)";
+                    modeClass = "bg-amber-950 border-amber-500/50 text-amber-400";
+                } else if (game.temp >= 50 && game.temp <= 70) {
+                    eff = 1.0;
+                    modeText = "✨ ИДЕАЛ (100%)";
+                    modeClass = "bg-emerald-950 border-emerald-500/50 text-emerald-400";
+                    game.stats.perfectZoneSeconds++;
+                } else if (game.temp > 70 && game.temp <= 80) {
+                    eff = 0.8;
+                    modeText = "⚡ ОПТИМУМ (-20%)";
+                    modeClass = "bg-amber-950 border-amber-500/50 text-amber-400";
+                } else if (game.temp > 80 && game.temp < 100) {
+                    eff = 0.33;
+                    modeText = "⚠️ ТРОТТЛИНГ (-66%)";
+                    modeClass = "bg-red-950 border-red-500/50 text-red-400 animate-pulse";
+                } else if (game.temp >= 100) {
+                    triggerBurnout();
+                    return;
+                }
+
+                let baseIncome = (game.hardware.cpu.level * game.hardware.cpu.income) + 
+                                 (game.hardware.gpu.level * game.hardware.gpu.income) + 
+                                 (game.hardware.asic.level * game.hardware.asic.income) + 1.0;
+
+                let actualIncome = baseIncome * eff;
+                let addedCoins = actualIncome / 10;
+
+                game.coins += addedCoins;
+                game.stats.totalCoinsMined += addedCoins;
+
+                let currentHash = (game.hardware.cpu.level * 4) + (game.hardware.gpu.level * 15) + (game.hardware.asic.level * 60) + 5;
+                if (currentHash > game.stats.maxHashrate) game.stats.maxHashrate = currentHash;
+
+                updateAchievementProgress();
+                saveGame();
+                updateUI(netHeat, actualIncome, modeText, modeClass, currentHash);
+            }, 100);
+        }
+
+        function loadGame() {
+            const saved = localStorage.getItem('silicon_miner_save_v4');
+            if (saved) {
+                try {
+                    const parsed = JSON.parse(saved);
+                    game = Object.assign({}, game, parsed);
+                } catch(e){}
+            }
+            updateUI(0, 0, "ИДЕАЛ", "bg-emerald-950 border-emerald-500/50 text-emerald-400", 5);
+        }
+
+        function saveGame() {
+            localStorage.setItem('silicon_miner_save_v4', JSON.stringify(game));
+        }
+
+        function updateUI(netHeat, actualIncome, modeText, modeClass, currentHash) {
+            document.getElementById('coins-display').innerText = Math.floor(game.coins);
+            document.getElementById('prestige-display').innerText = `⭐ ${game.prestige}`;
+            document.getElementById('temp-display').innerText = Math.floor(game.temp) + '°C';
+            document.getElementById('hashrate-display').innerText = currentHash + ' MH/s';
+            document.getElementById('income-status').innerText = `Доход: +${actualIncome.toFixed(1)} 🪙/сек`;
+
+            const mb = document.getElementById('mode-badge');
+            mb.innerText = modeText;
+            mb.className = `text-[9px] font-bold px-2 py-1 rounded-lg border ${modeClass}`;
+
+            const hb = document.getElementById('heat-balance-text');
+            hb.innerText = (netHeat > 0 ? `+` : ``) + netHeat.toFixed(1) + `°C/сек`;
+            hb.className = netHeat > 0 ? "text-red-400 font-bold" : "text-blue-400 font-bold";
+
+            let tempPercent = Math.max(2, Math.min(98, game.temp));
+            document.getElementById('temp-pointer').style.left = tempPercent + '%';
+
+            const tempBox = document.getElementById('temp-box');
+            if (game.temp > 80 || game.temp < 40) {
+                tempBox.className = "flex items-center gap-1 px-2 py-1 rounded-xl transition-all temp-danger";
+            } else {
+                tempBox.className = "flex items-center gap-1 bg-slate-950 border border-blue-500/30 px-2 py-1 rounded-xl transition-all";
+            }
+
+            document.getElementById('cpu-lvl').innerText = game.hardware.cpu.level;
+            document.getElementById('cost-cpu').innerText = game.hardware.cpu.cost;
+            document.getElementById('gpu-lvl').innerText = game.hardware.gpu.level;
+            document.getElementById('cost-gpu').innerText = game.hardware.gpu.cost;
+            document.getElementById('asic-lvl').innerText = game.hardware.asic.level;
+            document.getElementById('cost-asic').innerText = game.hardware.asic.cost;
+
+            document.getElementById('fan-lvl').innerText = game.cooling.fan.level;
+            document.getElementById('cost-fan').innerText = game.cooling.fan.cost;
+            document.getElementById('water-lvl').innerText = game.cooling.water.level;
+            document.getElementById('cost-water').innerText = game.cooling.water.cost;
+            document.getElementById('oil-lvl').innerText = game.cooling.oil.level;
+            document.getElementById('cost-oil').innerText = game.cooling.oil.cost;
+
+            checkUnclaimedAchievements();
+        }
+
+        function updateAchievementProgress() {
+            game.achievements.perfect.progress = Math.floor(game.stats.perfectZoneSeconds);
+            game.achievements.uptime.progress = game.stats.totalPlaySeconds;
+            game.achievements.mined.progress = Math.floor(game.stats.totalCoinsMined);
+            game.achievements.hash.progress = game.stats.maxHashrate;
+            game.achievements.maintenance.progress = game.stats.pasteUsed + game.stats.freonUsed;
+        }
+
+        function claimAchievement(key) {
+            let a = game.achievements[key];
+            if (!a.claimed && a.progress >= a.step) {
+                a.claimed = true;
+                game.coins += a.reward;
+                game.prestige += a.prestigeReward;
+                
+                confetti({ particleCount: 50, spread: 50, origin: { y: 0.6 } });
+                showToast(`🎁 Награда получена (+${a.reward} 🪙 и +${a.prestigeReward} ⭐)!`, "yellow");
+                
+                setTimeout(() => {
+                    a.tier++;
+                    a.step = Math.floor(a.step * 1.6);
+                    a.reward = Math.floor(a.reward * 1.4);
+                    a.prestigeReward += 2;
+                    a.claimed = false;
+                    openAchievements();
+                }, 200);
+                saveGame();
+            }
+        }
+
+        function checkUnclaimedAchievements() {
+            let hasUnclaimed = Object.keys(game.achievements).some(k => {
+                let a = game.achievements[k];
+                return !a.claimed && a.progress >= a.step;
+            });
+            const badge = document.getElementById('ach-badge');
+            if (badge) {
+                if (hasUnclaimed) badge.classList.remove('hidden');
+                else badge.classList.add('hidden');
+            }
+        }
+
+        function buyHardware(type) {
+            let hw = game.hardware[type];
+            if (game.coins >= hw.cost) {
+                game.coins -= hw.cost;
+                hw.level++;
+                hw.cost = Math.floor(hw.cost * 1.3);
+                saveGame();
+                showToast("Железо смонтировано!", "cyan");
+            } else showToast("Недостаточно монет!", "red");
+        }
+
+        function buyCooling(type) {
+            let cl = game.cooling[type];
+            if (game.coins >= cl.cost) {
+                game.coins -= cl.cost;
+                cl.level++;
+                cl.cost = Math.floor(cl.cost * 1.35);
+                saveGame();
+                showToast("Охлаждение закуплено!", "blue");
+            } else showToast("Недостаточно монет!", "red");
+        }
+
+        function applyThermalPaste() {
+            if (game.coins < 25) { showToast("Недостаточно монет!", "red"); return; }
+            game.coins -= 25;
+            game.temp = Math.min(99, game.temp + 20);
+            game.stats.pasteUsed++;
+            saveGame();
+            showToast("Принудительный разогрев (+20°C)", "yellow");
+        }
+
+        function emergencyFlush() {
+            if (game.coins < 45) { showToast("Недостаточно монет!", "red"); return; }
+            game.coins -= 45;
+            game.temp = Math.max(10, game.temp - 30);
+            game.stats.freonUsed++;
+            saveGame();
+            showToast("Крио-сброс фреоном (-30°C)!", "blue");
+        }
+
+        function triggerBurnout() {
+            game.isBurnedOut = true;
+            game.repairTimeLeft = 30;
+            
+            document.getElementById('repair-timer').innerText = "30 сек";
+            document.getElementById('repair-modal').classList.remove('hidden');
+
+            clearInterval(game.repairInterval);
+            game.repairInterval = setInterval(() => {
+                game.repairTimeLeft--;
+                document.getElementById('repair-timer').innerText = game.repairTimeLeft + " сек";
+                if (game.repairTimeLeft <= 0) finishRepair();
+            }, 1000);
+        }
+
+        function finishRepair() {
+            clearInterval(game.repairInterval);
+            game.isBurnedOut = false;
+            game.temp = 60;
+            document.getElementById('repair-modal').classList.add('hidden');
+            showToast("Ремонт завершен!", "emerald");
+        }
+
+        function speedupRepair() {
+            if (game.coins < 100) { showToast("Недостаточно монет!", "red"); return; }
+            game.coins -= 100;
+            finishRepair();
+        }
+
+        function openAchievements() {
+            updateAchievementProgress();
+            const list = document.getElementById('achievements-list');
+            list.innerHTML = '';
+            
+            Object.keys(game.achievements).forEach(key => {
+                let a = game.achievements[key];
+                let ready = a.progress >= a.step && !a.claimed;
+                let percent = Math.min(100, Math.floor((a.progress / a.step) * 100));
+
+                const el = document.createElement('div');
+                el.className = `p-3 rounded-2xl border flex flex-col gap-2 ${ready ? 'bg-slate-900 border-yellow-500/60 shadow-[0_0_15px_rgba(234,179,8,0.2)]' : 'bg-slate-950 border-slate-800'}`;
+                el.innerHTML = `
+                    <div class="flex justify-between items-center">
+                        <span class="text-xs font-bold text-yellow-300">${a.title} (Этап ${a.tier})</span>
+                        <span class="text-[10px] text-yellow-400 font-orbitron">+${a.reward} 🪙 | +${a.prestigeReward} ⭐</span>
+                    </div>
+                    <div class="flex justify-between text-[10px] text-slate-400">
+                        <span>Прогресс: ${a.progress} / ${a.step}</span>
+                        <span>${percent}%</span>
+                    </div>
+                    <div class="w-full bg-slate-900 h-1.5 rounded-full overflow-hidden">
+                        <div class="bg-yellow-400 h-full transition-all duration-300" style="width: ${percent}%"></div>
+                    </div>
+                    <button onclick="claimAchievement('${key}')" ${!ready ? 'disabled class="w-full bg-slate-800/50 text-slate-500 text-xs py-1.5 rounded-xl font-bold cursor-not-allowed"' : 'class="w-full bg-gradient-to-r from-yellow-500 to-amber-600 text-slate-950 text-xs py-1.5 rounded-xl font-bold active:scale-95 transition shadow-md"'}>
+                        ${ready ? '🎁 Забрать награду' : '🔒 В процессе'}
+                    </button>
+                `;
+                list.appendChild(el);
+            });
+
+            document.getElementById('achievements-modal').classList.remove('hidden');
+        }
+
+        function closeAchievements() {
+            document.getElementById('achievements-modal').classList.add('hidden');
+        }
+
+        function resetGame() {
+            if (confirm("Перезапустить майнинг-ферму?")) {
+                localStorage.removeItem('silicon_miner_save_v4');
+                location.reload();
+            }
+        }
+
+        function showToast(msg, type) {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            toast.className = `toast bg-slate-900 border border-cyan-500/50 text-cyan-300 px-4 py-2 rounded-2xl text-xs font-semibold shadow-lg flex items-center gap-2`;
+            toast.innerHTML = `<i class="fa-solid fa-circle-info"></i> ${msg}`;
+            container.appendChild(toast);
+            setTimeout(() => toast.remove(), 2500);
+        }
+
+        window.onload = init;
+    </script>
+</body>
+</html>

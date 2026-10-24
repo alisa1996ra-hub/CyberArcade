@@ -1,0 +1,521 @@
+<!DOCTYPE html>
+<html lang="ru" class="h-full bg-slate-950 text-slate-100 select-none">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Мастерская плат: Ловля искр</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Inter:wght@400;600&display=swap');
+        body { font-family: 'Inter', sans-serif; touch-action: manipulation; }
+        .font-orbitron { font-family: 'Orbitron', sans-serif; }
+        
+        .spark {
+            position: absolute;
+            width: 36px;
+            height: 36px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: transform 0.1s;
+        }
+        .spark:active { transform: scale(1.3); }
+
+        @keyframes slideIn { from { transform: translateY(-30px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+        .toast { animation: slideIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
+    </style>
+</head>
+<body class="h-full flex flex-col justify-between p-3 max-w-md mx-auto overflow-hidden relative">
+
+    <div id="toast-container" class="fixed top-4 left-1/2 transform -translate-x-1/2 w-11/12 max-w-md z-50 flex flex-col gap-2 pointer-events-none"></div>
+
+    <!-- Шапка -->
+    <header class="flex items-center justify-between bg-slate-900/90 border border-slate-800 rounded-2xl px-3 py-2 shadow-lg shrink-0 z-10 gap-1.5">
+        <!-- Кнопка возврата в Хаб -->
+        <a href="../index.html" class="bg-slate-800 hover:bg-slate-700 text-cyan-400 px-2 py-1.5 rounded-xl text-[10px] font-bold transition flex items-center gap-1 active:scale-95 border border-cyan-500/30 shrink-0">
+            <i class="fa-solid fa-arrow-left"></i> На хаб
+        </a>
+
+        <div>
+            <span id="repair-level" class="font-orbitron text-xs font-extrabold text-emerald-400">Заказ #1</span>
+        </div>
+
+        <!-- Престиж -->
+        <div class="flex flex-col items-center">
+            <span class="text-[9px] uppercase font-bold text-slate-400">Престиж</span>
+            <span id="prestige-display" class="font-orbitron text-xs font-extrabold text-purple-400">⭐ 0</span>
+        </div>
+
+        <div class="flex items-center gap-1 bg-slate-950 border border-emerald-500/30 px-2 py-1 rounded-xl shrink-0">
+            <i class="fa-solid fa-bolt text-yellow-400 text-xs"></i>
+            <span id="score-display" class="font-orbitron font-bold text-emerald-300 text-xs">0 / 20</span>
+        </div>
+
+        <div class="flex items-center gap-1 bg-slate-950 border border-yellow-500/30 px-2 py-1 rounded-xl shrink-0">
+            <i class="fa-solid fa-coins text-yellow-400 text-xs"></i>
+            <span id="coins-display" class="font-orbitron font-bold text-yellow-400 text-xs">200</span>
+        </div>
+
+        <div class="flex items-center gap-1 shrink-0">
+            <button onclick="openAchievements()" class="bg-slate-800 hover:bg-slate-700 active:scale-95 text-yellow-400 p-2 rounded-xl border border-yellow-500/30 text-xs transition relative">
+                <i class="fa-solid fa-trophy"></i>
+                <span id="ach-badge" class="absolute -top-1 -right-1 w-2.5 h-2.5 bg-red-500 rounded-full hidden"></span>
+            </button>
+            <button onclick="resetShop()" class="bg-slate-800 hover:bg-slate-700 active:scale-95 text-slate-300 p-2 rounded-xl border border-slate-700 text-xs transition">
+                <i class="fa-solid fa-rotate-right"></i>
+            </button>
+        </div>
+    </header>
+
+    <!-- Игровой стол / Плата -->
+    <main class="flex-1 flex flex-col justify-center relative my-2 gap-3 items-center">
+        
+        <div class="w-full bg-slate-900/90 border border-slate-800 p-3 rounded-2xl flex justify-between items-center shadow-lg">
+            <div>
+                <h3 id="board-title" class="font-orbitron font-bold text-xs text-white">Диагностика платы</h3>
+                <p id="board-desc" class="text-[10px] text-slate-400">Цель: поймать 15 из 20 искр</p>
+            </div>
+            <div id="missed-counter" class="bg-slate-950 border border-red-500/30 px-3 py-1 rounded-xl font-orbitron text-xs text-red-400 font-bold">
+                Упущено: 0
+            </div>
+        </div>
+
+        <!-- Арена платы -->
+        <div id="pcb-arena" class="w-full h-72 bg-emerald-950/40 border-2 border-emerald-800/60 rounded-3xl relative overflow-hidden shadow-2xl transition-all">
+            <svg class="absolute inset-0 w-full h-full opacity-20 pointer-events-none" viewBox="0 0 100 100" preserveAspectRatio="none">
+                <path d="M 10 20 L 40 20 L 50 50 L 90 50 M 20 80 L 50 80 L 60 40 L 80 10" stroke="#10b981" stroke-width="1.5" fill="none"/>
+                <path d="M 30 10 L 30 60 L 70 90" stroke="#10b981" stroke-width="1" fill="none"/>
+            </svg>
+
+            <div id="sparks-layer" class="absolute inset-0 overflow-hidden pointer-events-auto"></div>
+
+            <div id="start-overlay" class="absolute inset-0 bg-slate-950/85 backdrop-blur-sm flex flex-col items-center justify-center p-6 z-30 text-center">
+                <div class="text-3xl mb-2">🛠️</div>
+                <h3 class="font-orbitron font-bold text-sm text-emerald-400 mb-1">Плата закреплена в тисках</h3>
+                <p id="start-board-info" class="text-[11px] text-slate-400 mb-4">Размер платки растет, искры летят быстрее. Готовы начать диагностику?</p>
+                <button onclick="startOrder()" class="bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 text-slate-950 font-orbitron font-extrabold px-6 py-3 rounded-xl text-xs uppercase tracking-wider shadow-lg transition active:scale-95">
+                    ▶ Начать ремонт
+                </button>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Подвал / Бустеры -->
+    <footer class="bg-slate-900/90 border border-slate-800 rounded-2xl p-2 shrink-0 flex items-center justify-around z-10 gap-2">
+        <button onclick="useDiagnosticsBooster()" class="flex-1 bg-slate-800 hover:bg-slate-700 border border-cyan-500/30 active:scale-95 rounded-xl p-2 flex flex-col items-center justify-center transition">
+            <span class="text-cyan-400 text-xs font-bold"><i class="fa-solid fa-eye text-xs"></i> Диагностика (+Время)</span>
+            <span class="text-[9px] text-yellow-400 font-orbitron mt-0.5">40 🪙</span>
+        </button>
+        
+        <button onclick="usePowerBooster()" class="flex-1 bg-slate-800 hover:bg-slate-700 border border-purple-500/30 active:scale-95 rounded-xl p-2 flex flex-col items-center justify-center transition">
+            <span class="text-purple-400 text-xs font-bold"><i class="fa-solid fa-gauge-high text-xs"></i> Идеальный БП (-Скорость)</span>
+            <span class="text-[9px] text-yellow-400 font-orbitron mt-0.5">60 🪙</span>
+        </button>
+    </footer>
+
+    <!-- МОДАЛКА: РЕЗУЛЬТАТ -->
+    <div id="result-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-slate-900 border border-emerald-500/40 rounded-3xl p-6 text-center max-w-xs w-full shadow-2xl">
+            <div id="result-icon-box" class="w-16 h-16 mx-auto mb-3 bg-emerald-500/20 border border-emerald-400/50 rounded-2xl flex items-center justify-center text-emerald-300 text-3xl shadow-lg">
+                ⚡
+            </div>
+            <h2 id="result-title" class="font-orbitron font-bold text-lg text-white mb-1">Ремонт завершен!</h2>
+            <p id="result-desc" class="text-xs text-slate-400 mb-4">Плата восстановлена.</p>
+            <div class="bg-slate-950 p-2.5 rounded-xl border border-slate-800 mb-5 flex justify-around items-center">
+                <div>
+                    <span class="text-[10px] text-slate-400 block font-semibold">Награда</span>
+                    <span id="order-reward" class="font-orbitron font-bold text-yellow-400 text-sm">+80 🪙</span>
+                </div>
+                <div class="w-px h-6 bg-slate-800"></div>
+                <div>
+                    <span class="text-[10px] text-slate-400 block font-semibold">Престиж</span>
+                    <span id="order-prestige" class="font-orbitron font-bold text-purple-400 text-sm">+1 ⭐</span>
+                </div>
+            </div>
+            <button id="result-btn" onclick="handleResultButton()" class="w-full bg-gradient-to-r from-emerald-500 to-teal-600 text-slate-950 font-bold py-2.5 rounded-xl text-xs uppercase tracking-wider transition active:scale-95 shadow-lg">
+                Следующий заказ
+            </button>
+        </div>
+    </div>
+
+    <!-- МОДАЛКА: ДОСТИЖЕНИЯ -->
+    <div id="achievements-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-slate-900 border border-slate-800 rounded-3xl w-full max-w-md max-h-[85vh] flex flex-col shadow-2xl overflow-hidden">
+            <div class="p-4 border-b border-slate-800 flex items-center justify-between bg-slate-950/50">
+                <div class="flex items-center gap-2.5">
+                    <div class="p-2 bg-yellow-500/10 border border-yellow-500/30 rounded-xl text-yellow-400"><i class="fa-solid fa-trophy text-base"></i></div>
+                    <div><h2 class="font-orbitron font-bold text-base text-white">Достижения мастера</h2><p class="text-[11px] text-slate-400">Награды и престиж</p></div>
+                </div>
+                <button onclick="closeAchievements()" class="text-slate-400 hover:text-white p-2 text-lg"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div id="achievements-list" class="p-4 overflow-y-auto space-y-2.5 flex-1"></div>
+        </div>
+    </div>
+
+    <script>
+        let shop = {
+            orderNum: 1,
+            coins: 200,
+            prestige: 0,
+            totalSparksGoal: 20,
+            caughtSparks: 0,
+            missedSparks: 0,
+            spawnTimer: null,
+            isRoundActive: false,
+            extraDurationBonus: 0,
+            speedMultiplier: 1.0,
+            boardNames: [
+                "Материнская плата LGA1200", 
+                "Видеокарта RTX 3060", 
+                "Блок питания ATX 750W", 
+                "Плата управления котлом",
+                "Серверная плата Xeon",
+                "Материнская плата Mac M2"
+            ],
+            stats: {
+                currentStreak: 0,
+                totalCompleted: 0,
+                totalSparksCaught: 0,
+                boostersUsed: 0
+            },
+            achievements: {
+                streak: { tier: 1, step: 3, reward: 80, prestigeReward: 2, progress: 0, claimed: false, title: "Серия успешных ремонтов" },
+                total: { tier: 1, step: 5, reward: 120, prestigeReward: 4, progress: 0, claimed: false, title: "Всего сдано плат" },
+                sparks: { tier: 1, step: 50, reward: 150, prestigeReward: 5, progress: 0, claimed: false, title: "Поймано искр" },
+                boosters: { tier: 1, step: 3, reward: 100, prestigeReward: 3, progress: 0, claimed: false, title: "Использование бустеров" }
+            }
+        };
+
+        function init() {
+            loadShop();
+            setupPreOverlay();
+        }
+
+        function loadShop() {
+            const saved = localStorage.getItem('repair_shop_save_v3');
+            if (saved) {
+                try {
+                    const parsed = JSON.parse(saved);
+                    shop.orderNum = parsed.orderNum || 1;
+                    shop.coins = parsed.coins !== undefined ? parsed.coins : 200;
+                    shop.prestige = parsed.prestige || 0;
+                    shop.stats = parsed.stats || shop.stats;
+                    shop.achievements = parsed.achievements || shop.achievements;
+                } catch(e){}
+            }
+            updateUI();
+        }
+
+        function saveShop() {
+            localStorage.setItem('repair_shop_save_v3', JSON.stringify({
+                orderNum: shop.orderNum,
+                coins: shop.coins,
+                prestige: shop.prestige,
+                stats: shop.stats,
+                achievements: shop.achievements
+            }));
+            updateUI();
+        }
+
+        function updateUI() {
+            document.getElementById('coins-display').innerText = shop.coins;
+            document.getElementById('prestige-display').innerText = `⭐ ${shop.prestige}`;
+            document.getElementById('repair-level').innerText = `Заказ #${shop.orderNum}`;
+            checkUnclaimedAchievements();
+        }
+
+        function setupPreOverlay() {
+            document.getElementById('result-modal').classList.add('hidden');
+            document.getElementById('start-overlay').classList.remove('hidden');
+
+            let bName = shop.boardNames[(shop.orderNum - 1) % shop.boardNames.length];
+            document.getElementById('board-title').innerText = bName;
+            
+            shop.totalSparksGoal = 20 + Math.floor(shop.orderNum / 4) * 5;
+            document.getElementById('board-desc').innerText = `Цель: 15 из ${shop.totalSparksGoal} искр. Уровень #${shop.orderNum}`;
+            document.getElementById('score-display').innerText = `0 / ${shop.totalSparksGoal}`;
+            document.getElementById('missed-counter').innerText = `Упущено: 0`;
+            document.getElementById('sparks-layer').innerHTML = '';
+        }
+
+        function startOrder() {
+            document.getElementById('start-overlay').classList.add('hidden');
+            shop.caughtSparks = 0;
+            shop.missedSparks = 0;
+            shop.isRoundActive = true;
+            shop.extraDurationBonus = 0;
+            shop.speedMultiplier = 1.0;
+
+            let spawnedCount = 0;
+            let spawnInterval = Math.max(500, 1400 - (shop.orderNum * 40));
+
+            shop.spawnTimer = setInterval(() => {
+                if (!shop.isRoundActive) return;
+                
+                if (spawnedCount < shop.totalSparksGoal) {
+                    spawnSpark();
+                    spawnedCount++;
+                } else {
+                    setTimeout(checkRoundEnd, 3000);
+                    clearInterval(shop.spawnTimer);
+                }
+            }, spawnInterval);
+        }
+
+        function spawnSpark() {
+            if (!shop.isRoundActive) return;
+
+            const arena = document.getElementById('pcb-arena');
+            const layer = document.getElementById('sparks-layer');
+            
+            const maxX = arena.clientWidth - 40;
+            const maxY = arena.clientHeight - 40;
+
+            const startX = Math.random() * maxX;
+            const startY = Math.random() * maxY;
+            const targetX = Math.random() * maxX;
+            const targetY = Math.random() * maxY;
+
+            const sparkEl = document.createElement('div');
+            sparkEl.className = 'spark text-yellow-300 text-xl drop-shadow-[0_0_8px_#eab308]';
+            sparkEl.innerHTML = `<i class="fa-solid fa-bolt"></i>`;
+            sparkEl.style.left = startX + 'px';
+            sparkEl.style.top = startY + 'px';
+
+            let baseDuration = Math.max(1.0, 2.4 - (shop.orderNum * 0.05));
+            let duration = (baseDuration + shop.extraDurationBonus) * shop.speedMultiplier;
+
+            sparkEl.style.transition = `all ${duration}s linear`;
+            layer.appendChild(sparkEl);
+
+            sparkEl.onclick = (e) => {
+                e.stopPropagation();
+                if (!shop.isRoundActive || sparkEl.classList.contains('caught')) return;
+                
+                sparkEl.classList.add('caught');
+                shop.caughtSparks++;
+                shop.stats.totalSparksCaught++;
+                document.getElementById('score-display').innerText = `${shop.caughtSparks} / ${shop.totalSparksGoal}`;
+
+                sparkEl.innerHTML = `<i class="fa-solid fa-check text-emerald-400"></i>`;
+                sparkEl.style.transform = 'scale(1.5)';
+                sparkEl.style.opacity = '0';
+                setTimeout(() => sparkEl.remove(), 300);
+
+                updateAchievementProgress();
+            };
+
+            setTimeout(() => {
+                if (!sparkEl.isConnected) return;
+                sparkEl.style.left = targetX + 'px';
+                sparkEl.style.top = targetY + 'px';
+            }, 50);
+
+            setTimeout(() => {
+                if (sparkEl.isConnected && !sparkEl.classList.contains('caught')) {
+                    sparkEl.remove();
+                    shop.missedSparks++;
+                    document.getElementById('missed-counter').innerText = `Упущено: ${shop.missedSparks}`;
+                }
+            }, duration * 1000 + 100);
+        }
+
+        function checkRoundEnd() {
+            if (!shop.isRoundActive) return;
+            const remaining = document.getElementById('sparks-layer').children.length;
+            if (remaining === 0) {
+                shop.isRoundActive = false;
+                finishOrder();
+            } else {
+                setTimeout(checkRoundEnd, 1000);
+            }
+        }
+
+        function finishOrder() {
+            shop.isRoundActive = false;
+            clearInterval(shop.spawnTimer);
+
+            let passed = shop.caughtSparks >= 15;
+            let isPerfect = shop.caughtSparks === shop.totalSparksGoal;
+
+            const modal = document.getElementById('result-modal');
+            const title = document.getElementById('result-title');
+            const desc = document.getElementById('result-desc');
+            const rewardEl = document.getElementById('order-reward');
+            const prestigeEl = document.getElementById('order-prestige');
+            const iconBox = document.getElementById('result-icon-box');
+            const btn = document.getElementById('result-btn');
+
+            let reward = 0;
+
+            if (passed) {
+                confetti({ particleCount: isPerfect ? 80 : 50, spread: 60, origin: { y: 0.6 } });
+                reward = 50 + (shop.orderNum * 15) + (isPerfect ? 50 : 0);
+                let prestigeReward = 1;
+                shop.coins += reward;
+                shop.prestige += prestigeReward;
+                
+                shop.stats.currentStreak++;
+                shop.stats.totalCompleted++;
+                saveShop();
+
+                title.innerText = isPerfect ? "ИДЕАЛЬНЫЙ РЕМОНТ!" : "ЗАКАЗ ВЫПОЛНЕН!";
+                desc.innerText = `Поймано искр: ${shop.caughtSparks} из ${shop.totalSparksGoal}.`;
+                rewardEl.innerText = `+${reward} 🪙`;
+                prestigeEl.innerText = `+${prestigeReward} ⭐`;
+                iconBox.className = "w-16 h-16 mx-auto mb-3 bg-emerald-500/20 border border-emerald-400/50 rounded-2xl flex items-center justify-center text-emerald-300 text-3xl shadow-lg";
+                iconBox.innerHTML = "⚡";
+                btn.innerText = "Следующий заказ";
+                btn.onclick = nextOrder;
+            } else {
+                shop.stats.currentStreak = 0;
+                saveShop();
+
+                title.innerText = "РЕМОНТ ПРОВАЛЕН";
+                desc.innerText = `Поймано всего ${shop.caughtSparks}. Нужно минимум 15. Попробуйте снова!`;
+                rewardEl.innerText = `0 🪙`;
+                prestigeEl.innerText = `0 ⭐`;
+                iconBox.className = "w-16 h-16 mx-auto mb-3 bg-red-500/20 border border-red-400/50 rounded-2xl flex items-center justify-center text-red-400 text-3xl shadow-lg";
+                iconBox.innerHTML = "❌";
+                btn.innerText = "Повторить попытку";
+                btn.onclick = retryOrder;
+            }
+
+            modal.classList.remove('hidden');
+        }
+
+        function nextOrder() {
+            shop.orderNum++;
+            saveShop();
+            setupPreOverlay();
+        }
+
+        function retryOrder() {
+            setupPreOverlay();
+        }
+
+        function useDiagnosticsBooster() {
+            if (!shop.isRoundActive) { showToast("Ремонт еще не запущен!", "red"); return; }
+            if (shop.coins < 40) { showToast("Недостаточно монет!", "red"); return; }
+            shop.coins -= 40;
+            shop.extraDurationBonus += 0.6;
+            shop.stats.boostersUsed++;
+            saveShop();
+            showToast("Диагностика улучшена! Искры летят медленнее.", "cyan");
+        }
+
+        function usePowerBooster() {
+            if (!shop.isRoundActive) { showToast("Ремонт еще не запущен!", "red"); return; }
+            if (shop.coins < 60) { showToast("Недостаточно монет!", "red"); return; }
+            shop.coins -= 60;
+            shop.speedMultiplier *= 1.4;
+            shop.stats.boostersUsed++;
+            saveShop();
+            showToast("Идеальный БП подключен! Напряжение стабильно.", "purple");
+        }
+
+        function updateAchievementProgress() {
+            shop.achievements.streak.progress = shop.stats.currentStreak;
+            shop.achievements.total.progress = shop.stats.totalCompleted;
+            shop.achievements.sparks.progress = shop.stats.totalSparksCaught;
+            shop.achievements.boosters.progress = shop.stats.boostersUsed;
+
+            checkUnclaimedAchievements();
+        }
+
+        function claimAchievement(key) {
+            let a = shop.achievements[key];
+            if (!a.claimed && a.progress >= a.step) {
+                a.claimed = true;
+                shop.coins += a.reward;
+                shop.prestige += a.prestigeReward;
+                
+                confetti({ particleCount: 50, spread: 50, origin: { y: 0.6 } });
+                showToast(`🎁 Награда получена (+${a.reward} 🪙, +${a.prestigeReward} ⭐)!`, "yellow");
+                
+                setTimeout(() => {
+                    a.tier++;
+                    a.step = Math.floor(a.step * 1.5);
+                    a.reward = Math.floor(a.reward * 1.4);
+                    a.prestigeReward += 2;
+                    a.claimed = false;
+                    openAchievements();
+                }, 200);
+                saveShop();
+            }
+        }
+
+        function checkUnclaimedAchievements() {
+            let hasUnclaimed = Object.keys(shop.achievements).some(k => {
+                let a = shop.achievements[k];
+                return !a.claimed && a.progress >= a.step;
+            });
+            const badge = document.getElementById('ach-badge');
+            if (badge) {
+                if (hasUnclaimed) badge.classList.remove('hidden');
+                else badge.classList.add('hidden');
+            }
+        }
+
+        function openAchievements() {
+            updateAchievementProgress();
+            const list = document.getElementById('achievements-list');
+            list.innerHTML = '';
+            
+            Object.keys(shop.achievements).forEach(key => {
+                let a = shop.achievements[key];
+                let ready = a.progress >= a.step && !a.claimed;
+                let percent = Math.min(100, Math.floor((a.progress / a.step) * 100));
+
+                const el = document.createElement('div');
+                el.className = `p-3 rounded-2xl border flex flex-col gap-2 ${ready ? 'bg-slate-900 border-yellow-500/60 shadow-[0_0_15px_rgba(234,179,8,0.2)]' : 'bg-slate-950 border-slate-800'}`;
+                el.innerHTML = `
+                    <div class="flex justify-between items-center">
+                        <span class="text-xs font-bold text-yellow-300">${a.title} (Этап ${a.tier})</span>
+                        <span class="text-[10px] text-yellow-400 font-orbitron">+${a.reward} 🪙 | +${a.prestigeReward} ⭐</span>
+                    </div>
+                    <div class="flex justify-between text-[10px] text-slate-400">
+                        <span>Прогресс: ${a.progress} / ${a.step}</span>
+                        <span>${percent}%</span>
+                    </div>
+                    <div class="w-full bg-slate-900 h-1.5 rounded-full overflow-hidden">
+                        <div class="bg-yellow-400 h-full transition-all duration-300" style="width: ${percent}%"></div>
+                    </div>
+                    <button onclick="claimAchievement('${key}')" ${!ready ? 'disabled class="w-full bg-slate-800/50 text-slate-500 text-xs py-1.5 rounded-xl font-bold cursor-not-allowed"' : 'class="w-full bg-gradient-to-r from-yellow-500 to-amber-600 text-slate-950 text-xs py-1.5 rounded-xl font-bold active:scale-95 transition shadow-md"'}>
+                        ${ready ? '🎁 Забрать награду' : '🔒 В процессе'}
+                    </button>
+                `;
+                list.appendChild(el);
+            });
+
+            document.getElementById('achievements-modal').classList.remove('hidden');
+        }
+
+        function closeAchievements() {
+            document.getElementById('achievements-modal').classList.add('hidden');
+        }
+
+        function resetShop() {
+            if (confirm("Сбросить прогресс мастерской?")) {
+                localStorage.removeItem('repair_shop_save_v3');
+                location.reload();
+            }
+        }
+
+        function showToast(msg, type) {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            toast.className = `toast bg-slate-900 border border-emerald-500/50 text-emerald-300 px-4 py-2 rounded-2xl text-xs font-semibold shadow-lg flex items-center gap-2`;
+            toast.innerHTML = `<i class="fa-solid fa-circle-info"></i> ${msg}`;
+            container.appendChild(toast);
+            setTimeout(() => toast.remove(), 2500);
+        }
+
+        window.onload = init;
+    </script>
+</body>
+</html>
