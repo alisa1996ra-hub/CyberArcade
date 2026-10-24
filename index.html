@@ -6,7 +6,7 @@
     <title>CyberArcade: Mastery Hub</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Inter:wght@400;600&display=swap');
         body { font-family: 'Inter', sans-serif; touch-action: manipulation; }
@@ -214,5 +214,32 @@
 
         window.onload = loadHubData;
     </script>
+<script>
+  // Инициализация Supabase
+  const SUPABASE_URL = 'https://vcwuemsgkoyvvpbinknk.supabase.co';
+  const SUPABASE_ANON_KEY = 'sb_publishable_Yj5hFZj-TQRGHUoPQx7LTg_220cvLPV';
+
+  const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+  // Универсальная функция отправки очков
+  window.submitScore = async function(score, gameId) {
+    const tgUser = window.Telegram?.WebApp?.initDataUnsafe?.user;
+    const userId = tgUser ? tgUser.id : Math.floor(Math.random() * 1000000);
+    const username = tgUser ? (tgUser.username || tgUser.first_name) : 'Player';
+
+    const { data, error } = await supabaseClient
+      .from('leaderboard')
+      .insert([
+        { user_id: userId, username: username, score: score, game_id: gameId }
+      ]);
+
+    if (error) {
+      console.error('Ошибка отправки:', error.message);
+      return false;
+    }
+    console.log('Рекорд успешно улетел в базу Supabase!');
+    return true;
+  };
+</script>
 </body>
 </html>
