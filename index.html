@@ -162,13 +162,21 @@
             auth: { persistSession: false }
         });
 
-        // Отправка очков в базу через REST API
+// Отправка очков в базу через REST API
         window.submitScore = async function(gameId, score) {
             if (!score || score <= 0) return;
 
+            // Если зашли не из Телеграма, создаем уникальный локальный ID для этого браузера/устройства
+            let guestId = localStorage.getItem('cyber_arcade_guest_id');
+            if (!guestId) {
+                guestId = Math.floor(100000 + Math.random() * 900000); // Случайный 6-значный ID
+                localStorage.setItem('cyber_arcade_guest_id', guestId);
+            }
+
             const tgUser = window.Telegram?.WebApp?.initDataUnsafe?.user;
-            const userId = tgUser && tgUser.id ? Number(tgUser.id) : 777777; 
-            const username = tgUser ? (tgUser.username || tgUser.first_name || 'Alisa') : 'Alisa';
+            // Если есть реальный юзер Telegram — берем его ID и ник, иначе гостевой
+            const userId = tgUser && tgUser.id ? Number(tgUser.id) : Number(guestId); 
+            const username = tgUser ? (tgUser.username || tgUser.first_name || 'Игрок') : ('Игрок_' + guestId);
 
             try {
                 const res = await fetch(SUPABASE_URL + '/rest/v1/leaderboard', {
@@ -191,7 +199,7 @@
                     const txt = await res.text();
                     console.error('API Error:', txt);
                 } else {
-                    console.log('Score submitted successfully:', gameId, score);
+                    console.log('Score submitted successfully:', gameId, score, 'as user:', username);
                 }
             } catch (err) {
                 console.error('Network Exception during submitScore:', err);
