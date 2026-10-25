@@ -210,20 +210,71 @@
             }
         };
 
-        // Загрузка и отрисовка таблицы лидеров (фильтруем тех, кто global-prestige)
         async function loadLeaderboard(gameId = 'global') {
             document.querySelectorAll('.lb-btn').forEach(b => {
-                const onClickAttr = b.getAttribute('onclick') || '';
-                if (onClickAttr.includes(`'${gameId}'`)) {
+                const attr = b.getAttribute('onclick') || '';
+                if (attr.includes(`'${gameId}'`)) {
                     b.style.background = '#38bdf8';
                     b.style.color = '#0f172a';
                     b.style.borderColor = '#38bdf8';
                 } else {
                     b.style.background = '#1e293b';
                     b.style.color = '#94a3b8';
-                    b.style.borderColor = '#334155';
+                    b.style.borderColor = 'transparent';
                 }
             });
+
+            const box = document.getElementById('leaderboard-list');
+            if (!box) return;
+            box.innerHTML = '<div style="text-align: center; color: #64748b; padding: 15px;">Download BD...</div>';
+
+            const url = 'https://vcwuemsgkoywvpbinknk.supabase.co';
+            const key = 'sb_publishable_Yj5hFZj-TQRGHUOPQx7LTg_220cvLPV';
+
+            try {
+              
+                let endpoint = url + '/rest/v1/leaderboard?select=*&order=score.desc&limit=10';
+                if (gameId !== 'global') {
+                    endpoint = url + `/rest/v1/leaderboard?select=*&game_id=eq.${gameId}&order=score.desc&limit=10`;
+                }
+
+                const res = await fetch(endpoint, {
+                    method: 'GET',
+                    headers: {
+                        'apikey': key,
+                        'Authorization': 'Bearer ' + key
+                    }
+                });
+
+                if (!res.ok) {
+                    throw new Error('Error of server: ' + res.status);
+                }
+
+                const data = await res.json();
+
+                if (!data || data.length === 0) {
+                    box.innerHTML = '<div style="text-align: center; color: #64748b; padding: 15px;">No Master... To WIN!<!</div>';
+                    return;
+                }
+
+                let html = '<div style="display: flex; flex-direction: column; gap: 6px;">';
+                data.forEach((row, index) => {
+                    const rankEmoji = index === 0 ? '' : index === 1 ? '' : index === 2 ? '' : `#${index + 1}`;
+                    html += `
+                        <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(30, 41, 59, 0.5); padding: 6px 10px; border-radius: 6px; font-size: 11px;">
+                            <span style="color: #cbd5e1;">${rankEmoji} <b>${row.username || 'Gamer'}</b></span>
+                            <span style="color: #38bdf8; font-weight: bold;"> ${row.score}</span>
+                        </div>
+                    `;
+                });
+                html += '</div>';
+                box.innerHTML = html;
+
+            } catch (err) {
+                console.error('Leaderboard load error:', err);
+                box.innerHTML = `<div style="text-align: center; color: #ef4444; padding: 15px;">Not really table</div>`;
+            }
+        }
 
             const container = document.getElementById('leaderboard-list');
             container.innerHTML = '<div style="text-align: center; color: #64748b; padding: 15px;">Загрузка данных из базы...</div>';
