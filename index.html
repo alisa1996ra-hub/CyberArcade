@@ -221,25 +221,25 @@
 
   const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-  // Универсальная функция отправки очков
-  window.submitScore = async function(score, gameId) {
+// Универсальная функция отправки очков
+window.submitScore = async function(gameId, score) {
     const tgUser = window.Telegram?.WebApp?.initDataUnsafe?.user;
     const userId = tgUser ? tgUser.id : Math.floor(Math.random() * 1000000);
-    const username = tgUser ? (tgUser.username || tgUser.first_name) : 'Player';
+    const username = tgUser ? (tgUser.username || tgUser.first_name) : 'Алиса';
 
     const { data, error } = await supabaseClient
-      .from('leaderboard')
-      .insert([
-        { user_id: userId, username: username, score: score, game_id: gameId }
-      ]);
+        .from('leaderboard')
+        .insert([
+            { user_id: userId, username: username, score: score, game_id: gameId }
+        ]);
 
     if (error) {
-      console.error('Ошибка отправки:', error.message);
-      return false;
+        console.error('Ошибка отправки рекорда:', error.message);
+        return false;
     }
     console.log('Рекорд успешно улетел в базу Supabase!');
     return true;
-  };
+};
 </script>
 <!-- Секция таблицы лидеров CyberArcade -->
 <div class="leaderboard-container" style="background: rgba(15, 23, 42, 0.8); border: 1px solid #38bdf8; border-radius: 12px; padding: 16px; margin: 20px 0; color: #f8fafc; font-family: monospace;">
@@ -247,12 +247,12 @@
   
   <!-- Кнопки-переключатели категорий (6 штук) -->
   <div style="display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; margin-bottom: 14px;">
-    <button onclick="loadLeaderboard('global' this)" class="lb-btn active" style="background: #38bdf8; color: #0f172a; border: none; padding: 6px 10px; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 11px;">Общий топ</button>
-    <button onclick="loadLeaderboard('power-station' this)" class="lb-btn" style="background: #1e293b; color: #94a3b8; border: 1px solid #334155; padding: 6px 10px; border-radius: 6px; cursor: pointer; font-size: 11px;">Power Station</button>
-    <button onclick="loadLeaderboard('neon-solitaire' this)" class="lb-btn" style="background: #1e293b; color: #94a3b8; border: 1px solid #334155; padding: 6px 10px; border-radius: 6px; cursor: pointer; font-size: 11px;">Neon Solitaire</button>
-    <button onclick="loadLeaderboard('circuit-fix' this)" class="lb-btn" style="background: #1e293b; color: #94a3b8; border: 1px solid #334155; padding: 6px 10px; border-radius: 6px; cursor: pointer; font-size: 11px;">Circuit Fix</button>
-    <button onclick="loadLeaderboard('cpu-cooler' this)" class="lb-btn" style="background: #1e293b; color: #94a3b8; border: 1px solid #334155; padding: 6px 10px; border-radius: 6px; cursor: pointer; font-size: 11px;">CPU Cooler</button>
-    <button onclick="loadLeaderboard('repair-shop' this)" class="lb-btn" style="background: #1e293b; color: #94a3b8; border: 1px solid #334155; padding: 6px 10px; border-radius: 6px; cursor: pointer; font-size: 11px;">Repair Shop</button>
+    <button onclick="loadLeaderboard('global')" class="lb-btn active" style="background: #38bdf8; color: #0f172a; border: none; padding: 6px 10px; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 11px;">Общий топ</button>
+    <button onclick="loadLeaderboard('power-station')" class="lb-btn" style="background: #1e293b; color: #94a3b8; border: 1px solid #334155; padding: 6px 10px; border-radius: 6px; cursor: pointer; font-size: 11px;">Power Station</button>
+    <button onclick="loadLeaderboard('neon-solitaire')" class="lb-btn" style="background: #1e293b; color: #94a3b8; border: 1px solid #334155; padding: 6px 10px; border-radius: 6px; cursor: pointer; font-size: 11px;">Neon Solitaire</button>
+    <button onclick="loadLeaderboard('circuit-fix')" class="lb-btn" style="background: #1e293b; color: #94a3b8; border: 1px solid #334155; padding: 6px 10px; border-radius: 6px; cursor: pointer; font-size: 11px;">Circuit Fix</button>
+    <button onclick="loadLeaderboard('cpu-cooler')" class="lb-btn" style="background: #1e293b; color: #94a3b8; border: 1px solid #334155; padding: 6px 10px; border-radius: 6px; cursor: pointer; font-size: 11px;">CPU Cooler</button>
+    <button onclick="loadLeaderboard('repair-shop')" class="lb-btn" style="background: #1e293b; color: #94a3b8; border: 1px solid #334155; padding: 6px 10px; border-radius: 6px; cursor: pointer; font-size: 11px;">Repair Shop</button>
   </div>
 
   <!-- Список вывода результатов -->
@@ -261,58 +261,56 @@
   </div>
 </div>
 <script>
-  async function loadLeaderboard(gameId, btn) {
-    // Подсветка активной кнопки
+async function loadLeaderboard(gameId) {
+    // Сбрасываем подсветку всех кнопок
     document.querySelectorAll('.lb-btn').forEach(b => {
-      b.style.background = '#1e293b';
-      b.style.color = '#94a3b8';
-      b.style.borderColor = '#334155';
+        b.style.background = '#1e293b';
+        b.style.color = '#94a3b8';
+        b.style.borderColor = '#334155';
     });
-    if (btn) {
-      btn.style.background = '#38bdf8';
-      btn.style.color = '#0f172a';
-      btn.style.borderColor = '#38bdf8';
+    
+    // Подсвечиваем ту кнопку, которую нажали
+    const activeBtn = document.querySelector(`.lb-btn[data-game="${gameId}"]`);
+    if (activeBtn) {
+        activeBtn.style.background = '#38bdf8';
+        activeBtn.style.color = '#0f172a';
+        activeBtn.style.borderColor = '#38bdf8';
     }
+
     const container = document.getElementById('leaderboard-list');
-    container.innerHTML = '<div style="text-align: center; color: #64748b; padding: 20px;">Загрузка...</div>';
+    container.innerHTML = '<div style="text-align: center; color: #64748b; padding: 20px;">Загрузка данных из базы...</div>';
 
     try {
-      let query = supabaseClient.from('leaderboard').select('*').order('score', { ascending: false }).limit(10);
-      
-      // Если выбрана конкретная игра, фильтруем по ней
-      if (gameId !== 'global') {
-        query = query.eq('game_id', gameId);
-      }
+        let query = supabaseClient.from('leaderboard').select('*');
+        if (gameId && gameId !== 'global') {
+            query = query.eq('game_id', gameId);
+        }
+        
+        const { data, error } = await query.order('score', { ascending: false }).limit(10);
+        if (error) throw error;
 
-      const { data, error } = await query;
+        if (!data || data.length === 0) {
+            container.innerHTML = '<div style="text-align: center; color: #64748b; padding: 20px;">Рекордов пока нет. Стань первым!</div>';
+            return;
+        }
 
-      if (error) throw error;
+        let html = '<table style="width: 100%; border-collapse: collapse; font-size: 12px;">';
+        html += '<tr style="border-bottom: 1px solid #334155; color: #94a3b8;"><th style="text-align: left; padding: 6px;">Игрок</th><th style="text-align: right; padding: 6px;">Счет</th></tr>';
+        
+        data.forEach((row, index) => {
+            html += `<tr style="border-bottom: 1px solid #1e293b;">
+                <td style="padding: 6px; color: #f8fafc;">${index + 1}. ${row.username || 'Алиса'}</td>
+                <td style="text-align: right; padding: 6px; color: #38bdf8; font-weight: bold;">⭐ ${row.score}</td>
+            </tr>`;
+        });
+        html += '</table>';
+        container.innerHTML = html;
 
-      if (!data || data.length === 0) {
-        container.innerHTML = '<div style="text-align: center; color: #64748b; padding: 20px;">Рекордов пока нет. Стань первым!</div>';
-        return;
-      }
-
-      let html = '<table style="width: 100%; border-collapse: collapse;">';
-      html += '<tr style="border-bottom: 1px solid #334155; color: #64748b; font-size: 11px; text-align: left;"><th style="padding: 4px;">#</th><th style="padding: 4px;">Игрок</th><th style="padding: 4px; text-align: right;">Счет</th></tr>';
-      
-      data.forEach((row, index) => {
-        let medal = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : `${index + 1}.`;
-        html += `<tr style="border-bottom: 1px solid #1e293b;">
-          <td style="padding: 6px 4px; width: 30px;">${medal}</td>
-          <td style="padding: 6px 4px; color: #e2e8f0; overflow: hidden; text-overflow: ellipsis; max-width: 120px;">${row.username || 'Anonymous'}</td>
-          <td style="padding: 6px 4px; text-align: right; color: #38bdf8; font-weight: bold;">${row.score}</td>
-        </tr>`;
-      });
-      html += '</table>';
-
-      container.innerHTML = html;
     } catch (err) {
-      console.error(err);
-      const container =  document.getElementById('leaderboard-list');
-      container.innerHTML = `<div style="text-align: center; color: #ef4444; padding: 20px;">!!!Ошибка: ${err.message || JSON.stringify(err)}</div>`;
+        console.error(err);
+        container.innerHTML = `<div style="color: #ef4444; text-align: center; padding: 15px; font-size: 11px;">⚠️ Ошибка: ${err.message || JSON.stringify(err)}</div>`;
     }
-  }
+}
 
   // Автозагрузка общего топа при старте страницы
   window.addEventListener('DOMContentLoaded', () => {
