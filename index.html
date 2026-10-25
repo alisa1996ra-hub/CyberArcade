@@ -163,8 +163,8 @@
           auth: { persistSession: false }
 });
 
-        // Бронебойная функция отправки рекорда с отладкой
-      window.submitScore = async function(gameId, score) {
+        // Полностью автономная отправка через REST API без падений на клиенте
+        window.submitScore = async function(gameId, score) {
             if (!score || score <= 0) return;
 
             const url = 'https://vcwuemsgkoywvpbinknk.supabase.co';
@@ -175,6 +175,7 @@
             const username = tgUser ? (tgUser.username || tgUser.first_name || 'Alisa') : 'Alisa';
 
             const box = document.getElementById('leaderboard-list');
+            if (box) box.innerHTML = '<div style="color: #38bdf8; padding: 6px; font-size: 10px; text-align:center;">Стучимся в базу...</div>';
 
             try {
                 const res = await fetch(url + '/rest/v1/leaderboard', {
@@ -196,16 +197,19 @@
                 if (!res.ok) {
                     const txt = await res.text();
                     console.error('API Error:', txt);
-                    if (box) box.innerHTML = '<div style="color: #ef4444; padding: 8px; font-size: 10px; word-break: break-all;">Err (' + res.status + '): ' + txt + '</div>';
+                    if (box) box.innerHTML = '<div style="color: #ef4444; padding: 6px; font-size: 10px; word-break: break-all;">Ошибка ' + res.status + ': ' + txt + '</div>';
                 } else {
                     console.log('Success:', gameId, score);
-                    loadLeaderboard(gameId);
+                    if (typeof loadLeaderboard === 'function') {
+                        loadLeaderboard(gameId);
+                    }
                 }
             } catch (err) {
                 console.error('Network Exception:', err);
-                if (box) box.innerHTML = '<div style="color: #ef4444; padding: 8px; font-size: 10px;">Net Err: ' + err.message + '</div>';
+                if (box) box.innerHTML = '<div style="color: #ef4444; padding: 6px; font-size: 10px;">Сеть упала: ' + err.message + '</div>';
             }
         };
+
         // Загрузка и отрисовка таблицы лидеров (фильтруем тех, кто global-prestige)
         async function loadLeaderboard(gameId = 'global') {
             document.querySelectorAll('.lb-btn').forEach(b => {
