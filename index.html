@@ -280,7 +280,36 @@ window.submitScore = async function(gameId, score) {
   </div>
 </div>
 <script>
-// Загрузка и агрегация рейтинга
+// 1. Атомарная функция отправки рекорда (удаляет старый результат игры, пишет свежий без дублей)
+window.submitScore = async function(gameId, score) {
+    const tgUser = window.Telegram?.WebApp?.initDataUnsafe?.user;
+    const userId = tgUser ? tgUser.id : 'local_alisa_master';
+    const username = tgUser ? (tgUser.username || tgUser.first_name) : 'Алиса';
+
+    try {
+        // Удаляем старые записи этого пользователя для данной игры
+        await supabaseClient
+            .from('leaderboard')
+            .delete()
+            .eq('user_id', userId)
+            .eq('game_id', gameId);
+
+        // Вставляем актуальный рекорд
+        const { error: insertErr } = await supabaseClient
+            .from('leaderboard')
+            .insert([{ user_id: userId, username: username, score: score, game_id: gameId }]);
+
+        if (insertErr) throw insertErr;
+
+        console.log('Рекорд успешно синхронизирован в Supabase!');
+        return true;
+    } catch (err) {
+        console.error('Ошибка в submitScore:', err.message);
+        return false;
+    }
+};
+
+// 2. Функция загрузки и агрегации рейтинга
 async function loadLeaderboard(gameId) {
     document.querySelectorAll('.lb-btn').forEach(b => {
         const onClickAttr = b.getAttribute('onclick') || '';
@@ -353,13 +382,11 @@ async function loadLeaderboard(gameId) {
         container.innerHTML = `<div style="color: #ef4444; text-align: center; padding: 15px; font-size: 11px;">⚠️ Ошибка: ${err.message || JSON.stringify(err)}</div>`;
     }
 }
-        // Автозапуск и тестовая отправка рекорда при старте
-        window.addEventListener('DOMContentLoaded', () => {
-            if (typeof window.submitScore === 'function') {
-                window.submitScore('power-station', 307);
-            }
-            loadLeaderboard('global');
-        });
+
+// 3. Автозапуск при старте страницы
+window.addEventListener('DOMContentLoaded', () => {
+    loadLeaderboard('global');
+});
     </script>
 </body>
 </html>
