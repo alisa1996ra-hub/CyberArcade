@@ -330,11 +330,11 @@
             document.getElementById('total-prestige').innerText = total;
 
             // Отправка очков в Supabase (отправляем каждый модуль, убираем глобальный дубль)
-            if (p1 > 0)await submitScore('power-station', p1);
-            if (p2 > 0)await submitScore('neon-solitaire', p2);
-            if (p3 > 0)await submitScore('circuit-fix', p3);
-            if (p4 > 0)await submitScore('cpu-cooler', p4);
-            if (p5 > 0)await submitScore('repair-shop', p5);
+            if (p1 > 0)await submitScore('power_station', p1);
+            if (p2 > 0)await submitScore('neon_solitaire', p2);
+            if (p3 > 0)await submitScore('circuit_fix', p3);
+            if (p4 > 0)await submitScore('silicon_miner', p4);
+            if (p5 > 0)await submitScore('repair_shop', p5);
 
             // Расчет ранга мастера
             let rankEl = document.getElementById('master-rank');
