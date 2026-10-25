@@ -188,6 +188,16 @@
             let total = p1 + p2 + p3 + p4 + p5;
             document.getElementById('total-prestige').innerText = total;
 
+            // Отправка очков в Supabase
+    if (typeof submitScore === 'function') {
+        if (p1 > 0) submitScore('power-station', p1);
+        if (p2 > 0) submitScore('neon-solitaire', p2);
+        if (p3 > 0) submitScore('circuit-fix', p3);
+        if (p4 > 0) submitScore('cpu-cooler', p4);
+        if (p5 > 0) submitScore('repair-shop', p5);
+        if (total > 0) submitScore('global-prestige', total);
+    }
+
             // Расчет ранга мастера
             let rankEl = document.getElementById('master-rank');
             if (total >= 150) {
