@@ -247,12 +247,12 @@
   
   <!-- Кнопки-переключатели категорий (6 штук) -->
   <div style="display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; margin-bottom: 14px;">
-    <button onclick="loadLeaderboard('global')" class="lb-btn active" style="background: #38bdf8; color: #0f172a; border: none; padding: 6px 10px; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 11px;">Общий топ</button>
-    <button onclick="loadLeaderboard('power-station')" class="lb-btn" style="background: #1e293b; color: #94a3b8; border: 1px solid #334155; padding: 6px 10px; border-radius: 6px; cursor: pointer; font-size: 11px;">Power Station</button>
-    <button onclick="loadLeaderboard('neon-solitaire')" class="lb-btn" style="background: #1e293b; color: #94a3b8; border: 1px solid #334155; padding: 6px 10px; border-radius: 6px; cursor: pointer; font-size: 11px;">Neon Solitaire</button>
-    <button onclick="loadLeaderboard('circuit-fix')" class="lb-btn" style="background: #1e293b; color: #94a3b8; border: 1px solid #334155; padding: 6px 10px; border-radius: 6px; cursor: pointer; font-size: 11px;">Circuit Fix</button>
-    <button onclick="loadLeaderboard('cpu-cooler')" class="lb-btn" style="background: #1e293b; color: #94a3b8; border: 1px solid #334155; padding: 6px 10px; border-radius: 6px; cursor: pointer; font-size: 11px;">CPU Cooler</button>
-    <button onclick="loadLeaderboard('repair-shop')" class="lb-btn" style="background: #1e293b; color: #94a3b8; border: 1px solid #334155; padding: 6px 10px; border-radius: 6px; cursor: pointer; font-size: 11px;">Repair Shop</button>
+    <button onclick="loadLeaderboard('global' this)" class="lb-btn active" style="background: #38bdf8; color: #0f172a; border: none; padding: 6px 10px; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 11px;">Общий топ</button>
+    <button onclick="loadLeaderboard('power-station' this)" class="lb-btn" style="background: #1e293b; color: #94a3b8; border: 1px solid #334155; padding: 6px 10px; border-radius: 6px; cursor: pointer; font-size: 11px;">Power Station</button>
+    <button onclick="loadLeaderboard('neon-solitaire' this)" class="lb-btn" style="background: #1e293b; color: #94a3b8; border: 1px solid #334155; padding: 6px 10px; border-radius: 6px; cursor: pointer; font-size: 11px;">Neon Solitaire</button>
+    <button onclick="loadLeaderboard('circuit-fix' this)" class="lb-btn" style="background: #1e293b; color: #94a3b8; border: 1px solid #334155; padding: 6px 10px; border-radius: 6px; cursor: pointer; font-size: 11px;">Circuit Fix</button>
+    <button onclick="loadLeaderboard('cpu-cooler' this)" class="lb-btn" style="background: #1e293b; color: #94a3b8; border: 1px solid #334155; padding: 6px 10px; border-radius: 6px; cursor: pointer; font-size: 11px;">CPU Cooler</button>
+    <button onclick="loadLeaderboard('repair-shop' this)" class="lb-btn" style="background: #1e293b; color: #94a3b8; border: 1px solid #334155; padding: 6px 10px; border-radius: 6px; cursor: pointer; font-size: 11px;">Repair Shop</button>
   </div>
 
   <!-- Список вывода результатов -->
@@ -261,17 +261,18 @@
   </div>
 </div>
 <script>
-  async function loadLeaderboard(gameId) {
+  async function loadLeaderboard(gameId, btn) {
     // Подсветка активной кнопки
-    document.querySelectorAll('.lb-btn').forEach(btn => {
-      btn.style.background = '#1e293b';
-      btn.style.color = '#94a3b8';
-      btn.style.borderColor = '#334155';
+    document.querySelectorAll('.lb-btn').forEach(b => {
+      b.style.background = '#1e293b';
+      b.style.color = '#94a3b8';
+      b.style.borderColor = '#334155';
     });
-    event.target.style.background = '#38bdf8';
-    event.target.style.color = '#0f172a';
-    event.target.style.borderColor = '#38bdf8';
-
+    if (btn) {
+      btn.style.background = '#38bdf8';
+      btn.style.color = '#0f172a';
+      btn.style.borderColor = '#38bdf8';
+    }
     const container = document.getElementById('leaderboard-list');
     container.innerHTML = '<div style="text-align: center; color: #64748b; padding: 20px;">Загрузка...</div>';
 
