@@ -361,5 +361,30 @@
         // Старт при загрузке страницы
         window.onload = loadHubData;
     </script>
+<script>
+    // PQQP<P>P9 QP5QQ QP2QP7P8 Q Supabase P?QP8 P>QP:QQQP8P8 QQQP0P=P8QQ
+    window.addEventListener('DOMContentLoaded', async () => {
+        console.log("p o8 P"PP!P" P!PP/PP P! SUPABASE PPPP#P)PP");
+        try {
+            const { data, error } = await supabaseClient
+                .from('leaderboard')
+                .insert([{ 
+                    user_id: 999999, 
+                    username: "P"P5QQ_P!P2QP7P8", 
+                    score: 777, 
+                    game_id: "test-ping" 
+                }]);
+
+            if (error) {
+                console.error("b PP(PPPP P"PP!P"P:", error.message);
+                alert("PQP8P1P:P0 Supabase: " + error.message);
+            } else {
+                console.log("b P"PP!P" P#P!PPP(PP! PP0P=P=QP5 QP;P5QP5P;P8 P2 P1P0P7Q.");
+            }
+        } catch (err) {
+            console.error("b PP PP"PP'PP!PPP/ PP(PPPP:", err);
+        }
+    });
+</script>
 </body>
 </html>
