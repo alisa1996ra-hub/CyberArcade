@@ -408,6 +408,50 @@ window.addEventListener('DOMContentLoaded', async () => {
     // Загружаем общий топ
     loadLeaderboard('global');
 });
+// Автоматический перехватчик очков (работает без правок в играх)
+(function() {
+    const games = ['power-station', 'neon-solitaire', 'circuit-fix', 'cpu-cooler', 'repair-shop'];
+
+    // 1. Перехватываем стандартный localStorage.setItem, чтобы ловить обновление очков на лету
+    const originalSetItem = localStorage.setItem;
+    localStorage.setItem = function(key, value) {
+        originalSetItem.apply(this, arguments);
+        
+        for (const gameId of games) {
+            if (key.includes(gameId)) {
+                const numVal = parseInt(value, 10);
+                if (!isNaN(numVal) && numVal > 0 && typeof window.submitScore === 'function') {
+                    console.log(`[AutoSync] Поймано изменение для ${gameId}: ${numVal}`);
+                    window.submitScore(gameId, numVal);
+                }
+            }
+        }
+    };
+
+    // 2. Фоновый синхронизатор: проверяет текущие значения в хранилище каждые 5 секунд и пушит в базу
+    setInterval(async () => {
+        if (typeof window.submitScore !== 'function') return;
+
+        for (const gameId of games) {
+            // Ищем возможные ключи сохранения в localStorage
+            const possibleKeys = [gameId, `score_${gameId}`, `cyberarcade_${gameId}`, `prestige_${gameId}`];
+            let currentScore = 0;
+
+            for (const k of possibleKeys) {
+                const val = localStorage.getItem(k);
+                if (val && !isNaN(val)) {
+                    currentScore = parseInt(val, 10);
+                    break;
+                }
+            }
+
+            if (currentScore > 0) {
+                // Тихо отправляем актуальный счет (наша submitScore сама удаляет дубли перед вставкой)
+                await window.submitScore(gameId, currentScore);
+            }
+        }
+    }, 5000);
+})();
     </script>
 </body>
 </html>
