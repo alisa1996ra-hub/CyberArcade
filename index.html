@@ -310,7 +310,7 @@
     } catch (err) {
       console.error(err);
       const container =  document.getElementById('leaderboard-list');
-      container.innerHTML = '<div style="text-align: center; color: #ef4444; padding: 20px;">!!!Ошибка: ${err.message || JSON.stringify(err)}</div>';
+      container.innerHTML = `<div style="text-align: center; color: #ef4444; padding: 20px;">!!!Ошибка: ${err.message || JSON.stringify(err)}</div>`;
     }
   }
 
