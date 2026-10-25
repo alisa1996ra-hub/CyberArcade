@@ -54,9 +54,7 @@
         <!-- Модуль 1 -->
         <a href="tiles-survive/index.html" class="game-card bg-slate-900 hover:bg-slate-850 p-3.5 rounded-2xl border border-cyan-500/30 flex items-center justify-between shadow-lg">
             <div class="flex items-center gap-3">
-                <div class="w-12 h-12 rounded-xl bg-cyan-500/20 border border-cyan-400/40 flex items-center justify-center text-2xl shrink-0">
-                    ⚡
-                </div>
+                <div class="w-12 h-12 rounded-xl bg-cyan-500/20 border border-cyan-400/40 flex items-center justify-center text-2xl shrink-0">⚡</div>
                 <div>
                     <h3 class="text-xs font-bold text-cyan-300 font-orbitron">Power Station</h3>
                     <p class="text-[10px] text-slate-400">Кликер энергостанции и перегрузки</p>
@@ -71,9 +69,7 @@
         <!-- Модуль 2 -->
         <a href="neon-solitaire/index.html" class="game-card bg-slate-900 hover:bg-slate-850 p-3.5 rounded-2xl border border-purple-500/30 flex items-center justify-between shadow-lg">
             <div class="flex items-center gap-3">
-                <div class="w-12 h-12 rounded-xl bg-purple-500/20 border border-purple-400/40 flex items-center justify-center text-2xl shrink-0">
-                    🃏
-                </div>
+                <div class="w-12 h-12 rounded-xl bg-purple-500/20 border border-purple-400/40 flex items-center justify-center text-2xl shrink-0">🃏</div>
                 <div>
                     <h3 class="text-xs font-bold text-purple-300 font-orbitron">Neon Match Solitaire</h3>
                     <p class="text-[10px] text-slate-400">Тройные неоновые совпадения</p>
@@ -88,9 +84,7 @@
         <!-- Модуль 3 -->
         <a href="circuit-fix/index.html" class="game-card bg-slate-900 hover:bg-slate-850 p-3.5 rounded-2xl border border-emerald-500/30 flex items-center justify-between shadow-lg">
             <div class="flex items-center gap-3">
-                <div class="w-12 h-12 rounded-xl bg-emerald-500/20 border border-emerald-400/40 flex items-center justify-center text-2xl shrink-0">
-                    🔌
-                </div>
+                <div class="w-12 h-12 rounded-xl bg-emerald-500/20 border border-emerald-400/40 flex items-center justify-center text-2xl shrink-0">🔌</div>
                 <div>
                     <h3 class="text-xs font-bold text-emerald-300 font-orbitron">Circuit Fix</h3>
                     <p class="text-[10px] text-slate-400">Электромонтаж и сборка цепи</p>
@@ -105,9 +99,7 @@
         <!-- Модуль 4 -->
         <a href="cpu-cooler/index.html" class="game-card bg-slate-900 hover:bg-slate-850 p-3.5 rounded-2xl border border-blue-500/30 flex items-center justify-between shadow-lg">
             <div class="flex items-center gap-3">
-                <div class="w-12 h-12 rounded-xl bg-blue-500/20 border border-blue-400/40 flex items-center justify-center text-2xl shrink-0">
-                    💻
-                </div>
+                <div class="w-12 h-12 rounded-xl bg-blue-500/20 border border-blue-400/40 flex items-center justify-center text-2xl shrink-0">💻</div>
                 <div>
                     <h3 class="text-xs font-bold text-blue-300 font-orbitron">CPU Cooler</h3>
                     <p class="text-[10px] text-slate-400">Разгон кремния и термобаланс</p>
@@ -122,9 +114,7 @@
         <!-- Модуль 5 -->
         <a href="repair-shop/index.html" class="game-card bg-slate-900 hover:bg-slate-850 p-3.5 rounded-2xl border border-yellow-500/30 flex items-center justify-between shadow-lg">
             <div class="flex items-center gap-3">
-                <div class="w-12 h-12 rounded-xl bg-yellow-500/20 border border-yellow-400/40 flex items-center justify-center text-2xl shrink-0">
-                    🛠️
-                </div>
+                <div class="w-12 h-12 rounded-xl bg-yellow-500/20 border border-yellow-400/40 flex items-center justify-center text-2xl shrink-0">🛠️</div>
                 <div>
                     <h3 class="text-xs font-bold text-yellow-300 font-orbitron">Repair Shop</h3>
                     <p class="text-[10px] text-slate-400">Мастерская плат и ловля искр</p>
@@ -137,41 +127,170 @@
         </a>
     </main>
 
+    <!-- Секция таблицы лидеров CyberArcade -->
+    <div class="leaderboard-container shrink-0" style="background: rgba(15, 23, 42, 0.8); border: 1px solid #38bdf8; border-radius: 12px; padding: 12px; margin-bottom: 12px; color: #f8fafc; font-family: monospace;">
+        <div style="font-size: 14px; font-weight: bold; margin-bottom: 10px; color: #38bdf8; text-align: center;">🏆 КИБЕР-ЗАЛ СЛАВЫ 🏆</div>
+        
+        <!-- Кнопки-переключатели категорий -->
+        <div style="display: flex; flex-wrap: wrap; gap: 4px; justify-content: center; margin-bottom: 10px;">
+            <button onclick="loadLeaderboard('global')" class="lb-btn active" style="background: #38bdf8; color: #0f172a; border: none; padding: 5px 8px; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 10px;">Общий топ</button>
+            <button onclick="loadLeaderboard('power-station')" class="lb-btn" style="background: #1e293b; color: #94a3b8; border: 1px solid #334155; padding: 5px 8px; border-radius: 6px; cursor: pointer; font-size: 10px;">Power Station</button>
+            <button onclick="loadLeaderboard('neon-solitaire')" class="lb-btn" style="background: #1e293b; color: #94a3b8; border: 1px solid #334155; padding: 5px 8px; border-radius: 6px; cursor: pointer; font-size: 10px;">Neon Solitaire</button>
+            <button onclick="loadLeaderboard('circuit-fix')" class="lb-btn" style="background: #1e293b; color: #94a3b8; border: 1px solid #334155; padding: 5px 8px; border-radius: 6px; cursor: pointer; font-size: 10px;">Circuit Fix</button>
+            <button onclick="loadLeaderboard('cpu-cooler')" class="lb-btn" style="background: #1e293b; color: #94a3b8; border: 1px solid #334155; padding: 5px 8px; border-radius: 6px; cursor: pointer; font-size: 10px;">CPU Cooler</button>
+            <button onclick="loadLeaderboard('repair-shop')" class="lb-btn" style="background: #1e293b; color: #94a3b8; border: 1px solid #334155; padding: 5px 8px; border-radius: 6px; cursor: pointer; font-size: 10px;">Repair Shop</button>
+        </div>
+
+        <!-- Список вывода результатов -->
+        <div id="leaderboard-list" style="font-size: 12px; min-height: 80px;">
+            <div style="text-align: center; color: #64748b; padding: 15px;">Загрузка данных из базы...</div>
+        </div>
+    </div>
+
     <!-- Подвал / Сброс общей статистики -->
     <footer class="shrink-0 pt-2 border-t border-slate-900 flex justify-between items-center text-[10px] text-slate-500">
         <span>CyberArcade Platform v2.5</span>
         <button onclick="resetHubProgress()" class="hover:text-red-400 transition">Сбросить все данные</button>
     </footer>
 
+    <!-- Единый скрипт платформы -->
+    <!-- Скрипты платформы -->
     <script>
-        function loadHubData() {
+        // Инициализация Supabase
+        const SUPABASE_URL = 'https://vcwuemsgkoywvpbinknk.supabase.co';
+        const SUPABASE_ANON_KEY = 'sb_publishable_Yj5hFZj-TQRGHUoPQx7LTg_220cvLPV';
+        const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        // Функция отправки рекорда (с числовым userId для int8)
+        window.submitScore = async function(gameId, score) {
+            const tgUser = window.Telegram?.WebApp?.initDataUnsafe?.user;
+            const userId = tgUser && tgUser.id ? Number(tgUser.id) : 777777; 
+            const username = tgUser ? (tgUser.username || tgUser.first_name) : 'Алиса';
+
+            try {
+                // Используем upsert (или delete + insert) для актуализации
+                await supabaseClient
+                    .from('leaderboard')
+                    .delete()
+                    .eq('user_id', userId)
+                    .eq('game_id', gameId);
+
+                await supabaseClient
+                    .from('leaderboard')
+                    .insert([{ 
+                        user_id: userId, 
+                        username: username, 
+                        score: Number(score), 
+                        game_id: gameId 
+                    }]);
+            } catch (err) {
+                console.error('Ошибка в submitScore:', err);
+            }
+        };
+
+        // Загрузка и отрисовка таблицы лидеров (фильтруем тех, кто global-prestige)
+        async function loadLeaderboard(gameId = 'global') {
+            document.querySelectorAll('.lb-btn').forEach(b => {
+                const onClickAttr = b.getAttribute('onclick') || '';
+                if (onClickAttr.includes(`'${gameId}'`)) {
+                    b.style.background = '#38bdf8';
+                    b.style.color = '#0f172a';
+                    b.style.borderColor = '#38bdf8';
+                } else {
+                    b.style.background = '#1e293b';
+                    b.style.color = '#94a3b8';
+                    b.style.borderColor = '#334155';
+                }
+            });
+
+            const container = document.getElementById('leaderboard-list');
+            container.innerHTML = '<div style="text-align: center; color: #64748b; padding: 15px;">Загрузка данных из базы...</div>';
+
+            try {
+                // Исключаем системную строку global-prestige из выборки
+                const { data, error } = await supabaseClient
+                    .from('leaderboard')
+                    .select('*')
+                    .neq('game_id', 'global-prestige');
+
+                if (error) throw error;
+
+                if (!data || data.length === 0) {
+                    container.innerHTML = '<div style="text-align: center; color: #64748b; padding: 15px;">Рекордов пока нет. Стань первым!</div>';
+                    return;
+                }
+
+                let processedData = [];
+
+                if (gameId === 'global') {
+                    const userMap = {};
+                    data.forEach(row => {
+                        const uid = row.user_id || row.username;
+                        if (!userMap[uid]) {
+                            userMap[uid] = { username: row.username || 'Алиса', totalScore: 0 };
+                        }
+                        userMap[uid].totalScore += Number(row.score || 0);
+                    });
+
+                    processedData = Object.values(userMap)
+                        .map(u => ({ username: u.username, score: u.totalScore }))
+                        .sort((a, b) => b.score - a.score)
+                        .slice(0, 10);
+                } else {
+                    processedData = data
+                        .filter(row => row.game_id === gameId)
+                        .map(row => ({ username: row.username || 'Алиса', score: Number(row.score || 0) }))
+                        .sort((a, b) => b.score - a.score)
+                        .slice(0, 10);
+                }
+
+                if (processedData.length === 0) {
+                    container.innerHTML = '<div style="text-align: center; color: #64748b; padding: 15px;">Рекордов пока нет. Стань первым!</div>';
+                    return;
+                }
+
+                let html = '<table style="width: 100%; border-collapse: collapse; font-size: 11px;">';
+                html += '<tr style="border-bottom: 1px solid #334155; color: #94a3b8;"><th style="text-align: left; padding: 4px;">Игрок</th><th style="text-align: right; padding: 4px;">Счет</th></tr>';
+                
+                processedData.forEach((row, index) => {
+                    html += `<tr style="border-bottom: 1px solid #1e293b;">
+                        <td style="padding: 5px; color: #f8fafc;">${index + 1}. ${row.username}</td>
+                        <td style="text-align: right; padding: 5px; color: #38bdf8; font-weight: bold;">⭐ ${row.score}</td>
+                    </tr>`;
+                });
+                html += '</table>';
+                container.innerHTML = html;
+
+            } catch (err) {
+                console.error(err);
+                container.innerHTML = `<div style="color: #ef4444; text-align: center; padding: 10px; font-size: 11px;">⚠️ Ошибка: ${err.message}</div>`;
+            }
+        }
+
+        // Загрузка данных хаба, расчет ранга и отправка в базу
+        async function loadHubData() {
             let p1 = 0, p2 = 0, p3 = 0, p4 = 0, p5 = 0;
 
-            // Модуль 1
             try {
                 const s1 = JSON.parse(localStorage.getItem('power_station_save_v5') || '{}');
                 p1 = s1.prestige || 0;
             } catch(e){}
 
-            // Модуль 2
             try {
                 const s2 = JSON.parse(localStorage.getItem('neon_solitaire_save_v2') || '{}');
                 p2 = s2.prestige || 0;
             } catch(e){}
 
-            // Модуль 3
             try {
                 const s3 = JSON.parse(localStorage.getItem('circuit_fix_save_v6') || '{}');
                 p3 = s3.prestige || 0;
             } catch(e){}
 
-            // Модуль 4
             try {
                 const s4 = JSON.parse(localStorage.getItem('silicon_miner_save_v4') || '{}');
                 p4 = s4.prestige || 0;
             } catch(e){}
 
-            // Модуль 5
             try {
                 const s5 = JSON.parse(localStorage.getItem('repair_shop_save_v3') || '{}');
                 p5 = s5.prestige || 0;
@@ -188,15 +307,12 @@
             let total = p1 + p2 + p3 + p4 + p5;
             document.getElementById('total-prestige').innerText = total;
 
-            // Отправка очков в Supabase
-    if (typeof submitScore === 'function') {
-        if (p1 > 0) submitScore('power-station', p1);
-        if (p2 > 0) submitScore('neon-solitaire', p2);
-        if (p3 > 0) submitScore('circuit-fix', p3);
-        if (p4 > 0) submitScore('cpu-cooler', p4);
-        if (p5 > 0) submitScore('repair-shop', p5);
-        if (total > 0) submitScore('global-prestige', total);
-    }
+            // Отправка очков в Supabase (отправляем каждый модуль, убираем глобальный дубль)
+            await submitScore('power-station', p1);
+            await submitScore('neon-solitaire', p2);
+            await submitScore('circuit-fix', p3);
+            await submitScore('cpu-cooler', p4);
+            await submitScore('repair-shop', p5);
 
             // Расчет ранга мастера
             let rankEl = document.getElementById('master-rank');
@@ -213,6 +329,9 @@
                 rankEl.innerText = "Ранг: Стажёр 🛠️";
                 rankEl.className = "text-[10px] bg-slate-800 border border-slate-700 text-slate-300 px-2.5 py-0.5 rounded-full font-bold";
             }
+
+            // Загружаем таблицу лидеров
+            loadLeaderboard('global');
         }
 
         function resetHubProgress() {
@@ -222,242 +341,8 @@
             }
         }
 
+        // Старт при загрузке страницы
         window.onload = loadHubData;
-    </script>
-<script>
-  // Инициализация Supabase
-  const SUPABASE_URL = 'https://vcwuemsgkoywvpbinknk.supabase.co';
-  const SUPABASE_ANON_KEY = 'sb_publishable_Yj5hFZj-TQRGHUoPQx7LTg_220cvLPV';
-
-  const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-
-// Умная отправка/обновление рекорда (без дублей)
-window.submitScore = async function(gameId, score) {
-    // Безопасный числовой ID для базы (int8): если Telegram не передал ID, берем дефолтное число
-    const tgUser = window.Telegram?.WebApp?.initDataUnsafe?.user;
-    const userId = tgUser && tgUser.id ? Number(tgUser.id) : 777777; 
-    const username = tgUser ? (tgUser.username || tgUser.first_name) : 'Алиса';
-
-    try {
-        // 1. Удаляем старую запись для этого пользователя и игры, чтобы не плодить дубли
-        await supabaseClient
-            .from('leaderboard')
-            .delete()
-            .eq('user_id', userId)
-            .eq('game_id', gameId);
-
-        // 2. Вставляем актуальный рекорд
-        const { error: insertErr } = await supabaseClient
-            .from('leaderboard')
-            .insert([{ 
-                user_id: userId, 
-                username: username, 
-                score: Number(score), 
-                game_id: gameId 
-            }]);
-
-        if (insertErr) {
-            console.error('[Supabase Insert Error]:', insertErr.message);
-        } else {
-            console.log(`[Supabase Success] Успешно отправлено: ${gameId} = ${score}`);
-        }
-    } catch (err) {
-        console.error('[Sync Exception]:', err);
-    }
-};
-</script>
-<!-- Секция таблицы лидеров CyberArcade -->
-<div class="leaderboard-container" style="background: rgba(15, 23, 42, 0.8); border: 1px solid #38bdf8; border-radius: 12px; padding: 16px; margin: 20px 0; color: #f8fafc; font-family: monospace;">
-  <div style="font-size: 16px; font-weight: bold; margin-bottom: 12px; color: #38bdf8; text-align: center;">🏆 КИБЕР-ЗАЛ СЛАВЫ 🏆</div>
-  
-  <!-- Кнопки-переключатели категорий (6 штук) -->
-  <div style="display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; margin-bottom: 14px;">
-    <button onclick="loadLeaderboard('global')" class="lb-btn active" style="background: #38bdf8; color: #0f172a; border: none; padding: 6px 10px; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 11px;">Общий топ</button>
-    <button onclick="loadLeaderboard('power-station')" class="lb-btn" style="background: #1e293b; color: #94a3b8; border: 1px solid #334155; padding: 6px 10px; border-radius: 6px; cursor: pointer; font-size: 11px;">Power Station</button>
-    <button onclick="loadLeaderboard('neon-solitaire')" class="lb-btn" style="background: #1e293b; color: #94a3b8; border: 1px solid #334155; padding: 6px 10px; border-radius: 6px; cursor: pointer; font-size: 11px;">Neon Solitaire</button>
-    <button onclick="loadLeaderboard('circuit-fix')" class="lb-btn" style="background: #1e293b; color: #94a3b8; border: 1px solid #334155; padding: 6px 10px; border-radius: 6px; cursor: pointer; font-size: 11px;">Circuit Fix</button>
-    <button onclick="loadLeaderboard('cpu-cooler')" class="lb-btn" style="background: #1e293b; color: #94a3b8; border: 1px solid #334155; padding: 6px 10px; border-radius: 6px; cursor: pointer; font-size: 11px;">CPU Cooler</button>
-    <button onclick="loadLeaderboard('repair-shop')" class="lb-btn" style="background: #1e293b; color: #94a3b8; border: 1px solid #334155; padding: 6px 10px; border-radius: 6px; cursor: pointer; font-size: 11px;">Repair Shop</button>
-  </div>
-
-  <!-- Список вывода результатов -->
-  <div id="leaderboard-list" style="font-size: 13px; min-height: 100px;">
-    <div style="text-align: center; color: #64748b; padding: 20px;">Загрузка данных из базы...</div>
-  </div>
-</div>
-<script>
-// 1. Атомарная функция отправки рекорда (удаляет старый результат игры, пишет свежий без дублей)
-window.submitScore = async function(gameId, score) {
-    const tgUser = window.Telegram?.WebApp?.initDataUnsafe?.user;
-    const userId = tgUser ? tgUser.id : 'local_alisa_master';
-    const username = tgUser ? (tgUser.username || tgUser.first_name) : 'Алиса';
-
-    try {
-        // Удаляем старые записи этого пользователя для данной игры
-        await supabaseClient
-            .from('leaderboard')
-            .delete()
-            .eq('user_id', userId)
-            .eq('game_id', gameId);
-
-        // Вставляем актуальный рекорд
-        const { error: insertErr } = await supabaseClient
-            .from('leaderboard')
-            .insert([{ user_id: userId, username: username, score: score, game_id: gameId }]);
-
-        if (insertErr) throw insertErr;
-
-        console.log('Рекорд успешно синхронизирован в Supabase!');
-        return true;
-    } catch (err) {
-        console.error('Ошибка в submitScore:', err.message);
-        return false;
-    }
-};
-
-// 2. Функция загрузки и агрегации рейтинга
-async function loadLeaderboard(gameId) {
-    document.querySelectorAll('.lb-btn').forEach(b => {
-        const onClickAttr = b.getAttribute('onclick') || '';
-        if (onClickAttr.includes(`'${gameId}'`)) {
-            b.style.background = '#38bdf8';
-            b.style.color = '#0f172a';
-            b.style.borderColor = '#38bdf8';
-        } else {
-            b.style.background = '#1e293b';
-            b.style.color = '#94a3b8';
-            b.style.borderColor = '#334155';
-        }
-    });
-
-    const container = document.getElementById('leaderboard-list');
-    container.innerHTML = '<div style="text-align: center; color: #64748b; padding: 20px;">Загрузка данных из базы...</div>';
-
-    try {
-        const { data, error } = await supabaseClient.from('leaderboard').select('*');
-        if (error) throw error;
-
-        if (!data || data.length === 0) {
-            container.innerHTML = '<div style="text-align: center; color: #64748b; padding: 20px;">Рекордов пока нет. Стань первым!</div>';
-            return;
-        }
-
-        let processedData = [];
-
-        if (gameId === 'global') {
-            const userMap = {};
-            data.forEach(row => {
-                const uid = row.user_id || row.username;
-                if (!userMap[uid]) {
-                    userMap[uid] = { username: row.username || 'Алиса', totalScore: 0 };
-                }
-                userMap[uid].totalScore += Number(row.score);
-            });
-
-            processedData = Object.values(userMap)
-                .map(u => ({ username: u.username, score: u.totalScore }))
-                .sort((a, b) => b.score - a.score)
-                .slice(0, 10);
-        } else {
-            processedData = data
-                .filter(row => row.game_id === gameId)
-                .map(row => ({ username: row.username || 'Алиса', score: Number(row.score) }))
-                .sort((a, b) => b.score - a.score)
-                .slice(0, 10);
-        }
-
-        if (processedData.length === 0) {
-            container.innerHTML = '<div style="text-align: center; color: #64748b; padding: 20px;">Рекордов пока нет. Стань первым!</div>';
-            return;
-        }
-
-        let html = '<table style="width: 100%; border-collapse: collapse; font-size: 12px;">';
-        html += '<tr style="border-bottom: 1px solid #334155; color: #94a3b8;"><th style="text-align: left; padding: 6px;">Игрок</th><th style="text-align: right; padding: 6px;">Счет</th></tr>';
-        
-        processedData.forEach((row, index) => {
-            html += `<tr style="border-bottom: 1px solid #1e293b;">
-                <td style="padding: 6px; color: #f8fafc;">${index + 1}. ${row.username}</td>
-                <td style="text-align: right; padding: 6px; color: #38bdf8; font-weight: bold;">⭐ ${row.score}</td>
-            </tr>`;
-        });
-        html += '</table>';
-        container.innerHTML = html;
-
-    } catch (err) {
-        console.error(err);
-        container.innerHTML = `<div style="color: #ef4444; text-align: center; padding: 15px; font-size: 11px;">⚠️ Ошибка: ${err.message || JSON.stringify(err)}</div>`;
-    }
-}
-// Умная авто-синхронизация всех реальных рекордов при старте
-window.addEventListener('DOMContentLoaded', async () => {
-    const terminals = ['power-station', 'neon-solitaire', 'circuit-fix', 'cpu-cooler', 'repair-shop'];
-    
-    // Проходим по каждому терминалу и отправляем реальный локальный счет, если он есть
-    for (const gameId of terminals) {
-        // Проверяем различные варианты ключей localStorage, которые могут использоваться в движке
-        const scoreKeys = [`score_${gameId}`, gameId, `cyberarcade_${gameId}`];
-        let score = 0;
-        
-        for (const key of scoreKeys) {
-            const val = localStorage.getItem(key);
-            if (val && !isNaN(val)) {
-                score = parseInt(val, 10);
-                break;
-            }
-        }
-        
-        if (score > 0 && typeof window.submitScore === 'function') {
-            await window.submitScore(gameId, score);
-        }
-    }
-
-    // Загружаем общий топ
-    loadLeaderboard('global');
-});
-// Автоматический перехватчик очков (работает без правок в играх)
-(function() {
-    const games = ['power-station', 'neon-solitaire', 'circuit-fix', 'cpu-cooler', 'repair-shop'];
-
-    // 1. Перехватываем стандартный localStorage.setItem, чтобы ловить обновление очков на лету
-    const originalSetItem = localStorage.setItem;
-    localStorage.setItem = function(key, value) {
-        originalSetItem.apply(this, arguments);
-        
-        for (const gameId of games) {
-            if (key.includes(gameId)) {
-                const numVal = parseInt(value, 10);
-                if (!isNaN(numVal) && numVal > 0 && typeof window.submitScore === 'function') {
-                    console.log(`[AutoSync] Поймано изменение для ${gameId}: ${numVal}`);
-                    window.submitScore(gameId, numVal);
-                }
-            }
-        }
-    };
-
-    // 2. Фоновый синхронизатор: проверяет текущие значения в хранилище каждые 5 секунд и пушит в базу
-    setInterval(async () => {
-        if (typeof window.submitScore !== 'function') return;
-
-        for (const gameId of games) {
-            // Ищем возможные ключи сохранения в localStorage
-            const possibleKeys = [gameId, `score_${gameId}`, `cyberarcade_${gameId}`, `prestige_${gameId}`];
-            let currentScore = 0;
-
-            for (const k of possibleKeys) {
-                const val = localStorage.getItem(k);
-                if (val && !isNaN(val)) {
-                    currentScore = parseInt(val, 10);
-                    break;
-                }
-            }
-
-            if (currentScore > 0) {
-                // Тихо отправляем актуальный счет (наша submitScore сама удаляет дубли перед вставкой)
-                await window.submitScore(gameId, currentScore);
-            }
-        }
-    }, 5000);
-})();
     </script>
 </body>
 </html>
