@@ -134,11 +134,11 @@
         <!-- Кнопки-переключатели категорий -->
         <div style="display: flex; flex-wrap: wrap; gap: 4px; justify-content: center; margin-bottom: 10px;">
             <button onclick="loadLeaderboard('global')" class="lb-btn active" style="background: #38bdf8; color: #0f172a; border: none; padding: 5px 8px; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 10px;">Общий топ</button>
-            <button onclick="loadLeaderboard('power-station')" class="lb-btn" style="background: #1e293b; color: #94a3b8; border: 1px solid #334155; padding: 5px 8px; border-radius: 6px; cursor: pointer; font-size: 10px;">Power Station</button>
-            <button onclick="loadLeaderboard('neon-solitaire')" class="lb-btn" style="background: #1e293b; color: #94a3b8; border: 1px solid #334155; padding: 5px 8px; border-radius: 6px; cursor: pointer; font-size: 10px;">Neon Solitaire</button>
-            <button onclick="loadLeaderboard('circuit-fix')" class="lb-btn" style="background: #1e293b; color: #94a3b8; border: 1px solid #334155; padding: 5px 8px; border-radius: 6px; cursor: pointer; font-size: 10px;">Circuit Fix</button>
-            <button onclick="loadLeaderboard('cpu-cooler')" class="lb-btn" style="background: #1e293b; color: #94a3b8; border: 1px solid #334155; padding: 5px 8px; border-radius: 6px; cursor: pointer; font-size: 10px;">CPU Cooler</button>
-            <button onclick="loadLeaderboard('repair-shop')" class="lb-btn" style="background: #1e293b; color: #94a3b8; border: 1px solid #334155; padding: 5px 8px; border-radius: 6px; cursor: pointer; font-size: 10px;">Repair Shop</button>
+            <button onclick="loadLeaderboard('power_station')" class="lb-btn" style="background: #1e293b; color: #94a3b8; border: 1px solid #334155; padding: 5px 8px; border-radius: 6px; cursor: pointer; font-size: 10px;">Power Station</button>
+            <button onclick="loadLeaderboard('neon_solitaire')" class="lb-btn" style="background: #1e293b; color: #94a3b8; border: 1px solid #334155; padding: 5px 8px; border-radius: 6px; cursor: pointer; font-size: 10px;">Neon Solitaire</button>
+            <button onclick="loadLeaderboard('circuit_fix')" class="lb-btn" style="background: #1e293b; color: #94a3b8; border: 1px solid #334155; padding: 5px 8px; border-radius: 6px; cursor: pointer; font-size: 10px;">Circuit Fix</button>
+            <button onclick="loadLeaderboard('silicon_miner')" class="lb-btn" style="background: #1e293b; color: #94a3b8; border: 1px solid #334155; padding: 5px 8px; border-radius: 6px; cursor: pointer; font-size: 10px;">CPU Cooler</button>
+            <button onclick="loadLeaderboard('repair_shop')" class="lb-btn" style="background: #1e293b; color: #94a3b8; border: 1px solid #334155; padding: 5px 8px; border-radius: 6px; cursor: pointer; font-size: 10px;">Repair Shop</button>
         </div>
 
         <!-- Список вывода результатов -->
@@ -153,36 +153,29 @@
         <button onclick="resetHubProgress()" class="hover:text-red-400 transition">Сбросить все данные</button>
     </footer>
 
-    <!-- Единый скрипт платформы -->
-    <!-- Скрипты платформы -->
+    <!-- Скрипты платформы и логика Supabase -->
     <script>
         // Инициализация Supabase
         const SUPABASE_URL = 'https://vcwuemsgkoywvpbinknk.supabase.co';
         const SUPABASE_ANON_KEY = 'sb_publishable_Yj5hFZj-TQRGHUoPQx7LTg_220cvLPV';
         const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-          auth: { persistSession: false }
-});
+            auth: { persistSession: false }
+        });
 
-        // Полностью автономная отправка через REST API без падений на клиенте
+        // Отправка очков в базу через REST API
         window.submitScore = async function(gameId, score) {
             if (!score || score <= 0) return;
-
-            const url = 'https://vcwuemsgkoywvpbinknk.supabase.co';
-            const key = 'sb_publishable_Yj5hFZj-TQRGHUOPQx7LTg_220cvLPV';
 
             const tgUser = window.Telegram?.WebApp?.initDataUnsafe?.user;
             const userId = tgUser && tgUser.id ? Number(tgUser.id) : 777777; 
             const username = tgUser ? (tgUser.username || tgUser.first_name || 'Alisa') : 'Alisa';
 
-            const box = document.getElementById('leaderboard-list');
-            if (box) box.innerHTML = '<div style="color: #38bdf8; padding: 6px; font-size: 10px; text-align:center;">Стучимся в базу...</div>';
-
             try {
-                const res = await fetch(url + '/rest/v1/leaderboard', {
+                const res = await fetch(SUPABASE_URL + '/rest/v1/leaderboard', {
                     method: 'POST',
                     headers: {
-                        'apikey': key,
-                        'Authorization': 'Bearer ' + key,
+                        'apikey': SUPABASE_ANON_KEY,
+                        'Authorization': 'Bearer ' + SUPABASE_ANON_KEY,
                         'Content-Type': 'application/json',
                         'Prefer': 'resolution=merge-duplicates'
                     },
@@ -197,19 +190,15 @@
                 if (!res.ok) {
                     const txt = await res.text();
                     console.error('API Error:', txt);
-                    if (box) box.innerHTML = '<div style="color: #ef4444; padding: 6px; font-size: 10px; word-break: break-all;">Ошибка ' + res.status + ': ' + txt + '</div>';
                 } else {
-                    console.log('Success:', gameId, score);
-                    if (typeof loadLeaderboard === 'function') {
-                        loadLeaderboard(gameId);
-                    }
+                    console.log('Score submitted successfully:', gameId, score);
                 }
             } catch (err) {
-                console.error('Network Exception:', err);
-                if (box) box.innerHTML = '<div style="color: #ef4444; padding: 6px; font-size: 10px;">Сеть упала: ' + err.message + '</div>';
+                console.error('Network Exception during submitScore:', err);
             }
         };
 
+        // Загрузка таблицы лидеров
         async function loadLeaderboard(gameId = 'global') {
             document.querySelectorAll('.lb-btn').forEach(b => {
                 const attr = b.getAttribute('onclick') || '';
@@ -224,67 +213,15 @@
                 }
             });
 
-            const box = document.getElementById('leaderboard-list');
-            if (!box) return;
-            box.innerHTML = '<div style="text-align: center; color: #64748b; padding: 15px;">Download BD...</div>';
-
-            const url = 'https://vcwuemsgkoywvpbinknk.supabase.co';
-            const key = 'sb_publishable_Yj5hFZj-TQRGHUOPQx7LTg_220cvLPV';
-
-            try {
-              
-                let endpoint = url + '/rest/v1/leaderboard?select=*&order=score.desc&limit=10';
-                if (gameId !== 'global') {
-                    endpoint = url + `/rest/v1/leaderboard?select=*&game_id=eq.${gameId}&order=score.desc&limit=10`;
-                }
-
-                const res = await fetch(endpoint, {
-                    method: 'GET',
-                    headers: {
-                        'apikey': key,
-                        'Authorization': 'Bearer ' + key
-                    }
-                });
-
-                if (!res.ok) {
-                    throw new Error('Error of server: ' + res.status);
-                }
-
-                const data = await res.json();
-
-                if (!data || data.length === 0) {
-                    box.innerHTML = '<div style="text-align: center; color: #64748b; padding: 15px;">No Master... To WIN!<!</div>';
-                    return;
-                }
-
-                let html = '<div style="display: flex; flex-direction: column; gap: 6px;">';
-                data.forEach((row, index) => {
-                    const rankEmoji = index === 0 ? '' : index === 1 ? '' : index === 2 ? '' : `#${index + 1}`;
-                    html += `
-                        <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(30, 41, 59, 0.5); padding: 6px 10px; border-radius: 6px; font-size: 11px;">
-                            <span style="color: #cbd5e1;">${rankEmoji} <b>${row.username || 'Gamer'}</b></span>
-                            <span style="color: #38bdf8; font-weight: bold;"> ${row.score}</span>
-                        </div>
-                    `;
-                });
-                html += '</div>';
-                box.innerHTML = html;
-
-            } catch (err) {
-                console.error('Leaderboard load error:', err);
-                box.innerHTML = `<div style="text-align: center; color: #ef4444; padding: 15px;">Not really table</div>`;
-            }
-        }
-
             const container = document.getElementById('leaderboard-list');
+            if (!container) return;
             container.innerHTML = '<div style="text-align: center; color: #64748b; padding: 15px;">Загрузка данных из базы...</div>';
 
             try {
-                // Исключаем системную строку global-prestige из выборки
                 const { data, error } = await supabaseClient
                     .from('leaderboard')
                     .select('*')
-                    .neq('game_id', 'global-prestige');
+                    .neq('game_id', 'test-ping');
 
                 if (error) throw error;
 
@@ -318,7 +255,7 @@
                 }
 
                 if (processedData.length === 0) {
-                    container.innerHTML = '<div style="text-align: center; color: #64748b; padding: 15px;">Рекордов пока нет. Стань первым!</div>';
+                    container.innerHTML = '<div style="text-align: center; color: #64748b; padding: 15px;">Рекордов пока нет в этой категории.</div>';
                     return;
                 }
 
@@ -326,8 +263,9 @@
                 html += '<tr style="border-bottom: 1px solid #334155; color: #94a3b8;"><th style="text-align: left; padding: 4px;">Игрок</th><th style="text-align: right; padding: 4px;">Счет</th></tr>';
                 
                 processedData.forEach((row, index) => {
+                    const medal = index === 0 ? '👑 ' : index === 1 ? '🥈 ' : index === 2 ? '🥉 ' : `${index + 1}. `;
                     html += `<tr style="border-bottom: 1px solid #1e293b;">
-                        <td style="padding: 5px; color: #f8fafc;">${index + 1}. ${row.username}</td>
+                        <td style="padding: 5px; color: #f8fafc;">${medal}${row.username}</td>
                         <td style="text-align: right; padding: 5px; color: #38bdf8; font-weight: bold;">⭐ ${row.score}</td>
                     </tr>`;
                 });
@@ -335,12 +273,12 @@
                 container.innerHTML = html;
 
             } catch (err) {
-                console.error(err);
-                container.innerHTML = `<div style="color: #ef4444; text-align: center; padding: 10px; font-size: 11px;">⚠️ Ошибка: ${err.message}</div>`;
+                console.error('Leaderboard load error:', err);
+                container.innerHTML = `<div style="color: #ef4444; text-align: center; padding: 10px; font-size: 11px;">⚠️ Ошибка загрузки: ${err.message}</div>`;
             }
         }
 
-        // Загрузка данных хаба, расчет ранга и отправка в базу
+        // Загрузка данных хаба, расчет ранга и отправка очков в базу
         async function loadHubData() {
             let p1 = 0, p2 = 0, p3 = 0, p4 = 0, p5 = 0;
 
@@ -380,12 +318,12 @@
             let total = p1 + p2 + p3 + p4 + p5;
             document.getElementById('total-prestige').innerText = total;
 
-            // Отправка очков в Supabase (отправляем каждый модуль, убираем глобальный дубль)
-            if (p1 > 0)await submitScore('power_station', p1);
-            if (p2 > 0)await submitScore('neon_solitaire', p2);
-            if (p3 > 0)await submitScore('circuit_fix', p3);
-            if (p4 > 0)await submitScore('silicon_miner', p4);
-            if (p5 > 0)await submitScore('repair_shop', p5);
+            // Отправка очков в Supabase по каждому модулю
+            if (p1 > 0) await submitScore('power_station', p1);
+            if (p2 > 0) await submitScore('neon_solitaire', p2);
+            if (p3 > 0) await submitScore('circuit_fix', p3);
+            if (p4 > 0) await submitScore('silicon_miner', p4);
+            if (p5 > 0) await submitScore('repair_shop', p5);
 
             // Расчет ранга мастера
             let rankEl = document.getElementById('master-rank');
@@ -394,7 +332,7 @@
                 rankEl.className = "text-[10px] bg-amber-950 border border-amber-500 text-amber-300 px-2.5 py-0.5 rounded-full font-bold";
             } else if (total >= 80) {
                 rankEl.innerText = "Ранг: Старший Электромеханик ⚡";
-                rankEl.className = "text-[10px] bg-purple-950 border border-purple-500 text-purple-300 px-2.5 py-0.5 rounded-full font-bold";
+                rankEl.className = "text-[10px] and bg-purple-950 border border-purple-500 text-purple-300 px-2.5 py-0.5 rounded-full font-bold";
             } else if (total >= 30) {
                 rankEl.innerText = "Ранг: Опытный Монтажник 🔌";
                 rankEl.className = "text-[10px] bg-blue-950 border border-blue-500 text-blue-300 px-2.5 py-0.5 rounded-full font-bold";
@@ -403,7 +341,7 @@
                 rankEl.className = "text-[10px] bg-slate-800 border border-slate-700 text-slate-300 px-2.5 py-0.5 rounded-full font-bold";
             }
 
-            // Загружаем таблицу лидеров
+            // Загружаем общую табличку лидеров при старте
             loadLeaderboard('global');
         }
 
@@ -415,30 +353,9 @@
         }
 
         // Старт при загрузке страницы
-        window.onload = loadHubData;
+        window.addEventListener('DOMContentLoaded', () => {
+            loadHubData();
+        });
     </script>
-<script>
-    window.addEventListener('DOMContentLoaded', async () => {
-        try {
-            const { data, error } = await supabaseClient
-                .from('leaderboard')
-                .insert([{ 
-                    user_id: 999999, 
-                    username: "Test_User", 
-                    score: 777, 
-                    game_id: "test-ping" 
-                }]);
-
-            if (error) {
-                console.error("Supabase Error:", error.message);
-                alert("Error: " + error.message);
-            } else {
-                console.log("Success!");
-            }
-        } catch (err) {
-            console.error("Exception:", err);
-        }
-    });
-</script>
 </body>
 </html>
