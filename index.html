@@ -382,9 +382,30 @@ async function loadLeaderboard(gameId) {
         container.innerHTML = `<div style="color: #ef4444; text-align: center; padding: 15px; font-size: 11px;">⚠️ Ошибка: ${err.message || JSON.stringify(err)}</div>`;
     }
 }
+// Умная авто-синхронизация всех реальных рекордов при старте
+window.addEventListener('DOMContentLoaded', async () => {
+    const terminals = ['power-station', 'neon-solitaire', 'circuit-fix', 'cpu-cooler', 'repair-shop'];
+    
+    // Проходим по каждому терминалу и отправляем реальный локальный счет, если он есть
+    for (const gameId of terminals) {
+        // Проверяем различные варианты ключей localStorage, которые могут использоваться в движке
+        const scoreKeys = [`score_${gameId}`, gameId, `cyberarcade_${gameId}`];
+        let score = 0;
+        
+        for (const key of scoreKeys) {
+            const val = localStorage.getItem(key);
+            if (val && !isNaN(val)) {
+                score = parseInt(val, 10);
+                break;
+            }
+        }
+        
+        if (score > 0 && typeof window.submitScore === 'function') {
+            await window.submitScore(gameId, score);
+        }
+    }
 
-// 3. Автозапуск при старте страницы
-window.addEventListener('DOMContentLoaded', () => {
+    // Загружаем общий топ
     loadLeaderboard('global');
 });
     </script>
