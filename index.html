@@ -27,7 +27,7 @@
 <body class="min-h-screen flex flex-col justify-between p-4 max-w-md mx-auto relative overflow-x-hidden bg-slate-950 text-slate-100">
 
     <!-- Шапка Хаба: Общий Престиж и Уровень Мастера -->
-    <header class="w-full bg-slate-900 p-4 rounded-3xl glow-box mb-4 shrink-0 relative overflow-hidden">
+    <header class="w-full bg-slate-900 p-4 rounded-3xl glow-box mb-3 shrink-0 relative overflow-hidden">
         <div class="absolute -right-6 -bottom-6 text-7xl opacity-10 pointer-events-none">⚡</div>
         
         <div class="flex justify-between items-center mb-3">
@@ -46,6 +46,33 @@
             </div>
         </div>
     </header>
+
+    <!-- Панель Игрока: Отображение и Смена Ника -->
+    <div class="bg-slate-900 border border-slate-800 rounded-2xl p-3 mb-4 flex justify-between items-center shrink-0 shadow-md">
+        <div class="flex items-center gap-2 overflow-hidden mr-2">
+            <span class="text-[11px] text-slate-400 shrink-0">Игрок:</span>
+            <span id="current-username-display" class="font-orbitron font-bold text-cyan-300 text-xs truncate">Загрузка...</span>
+        </div>
+        <button onclick="openChangeUsernameModal()" class="bg-slate-800 hover:bg-slate-700 text-cyan-400 text-[10px] font-bold px-2.5 py-1.5 rounded-xl border border-cyan-500/30 transition active:scale-95 shrink-0 flex items-center gap-1">
+            <i class="fa-solid fa-pen text-[9px]"></i> Ник
+        </button>
+    </div>
+
+    <!-- Модальное окно смены ника -->
+    <div id="username-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-slate-900 border border-cyan-500/50 rounded-3xl p-5 max-w-xs w-full text-center space-y-4 shadow-2xl">
+            <div class="text-3xl">👤</div>
+            <div>
+                <h3 class="font-orbitron font-bold text-sm text-cyan-400 mb-1">Ваш Позывной</h3>
+                <p class="text-[10px] text-slate-400">Этот ник будет отображаться в «Кибер-зале славы»</p>
+            </div>
+            <input type="text" id="username-input" maxlength="15" placeholder="Введите ник..." class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-center text-white font-orbitron focus:outline-none focus:border-cyan-400">
+            <div class="flex gap-2">
+                <button onclick="saveCustomUsername()" class="flex-1 bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold py-2 rounded-xl text-xs transition active:scale-95">Сохранить</button>
+                <button onclick="closeUsernameModal()" class="bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold py-2 px-3 rounded-xl text-xs transition">Отмена</button>
+            </div>
+        </div>
+    </div>
 
     <!-- Список игровых модулей -->
     <main class="flex-1 flex flex-col space-y-3 mb-4 overflow-y-auto">
@@ -149,7 +176,7 @@
 
     <!-- Подвал / Сброс общей статистики -->
     <footer class="shrink-0 pt-2 border-t border-slate-900 flex justify-between items-center text-[10px] text-slate-500">
-        <span>CyberArcade Platform v2.5</span>
+        <span>CyberArcade Platform v2.6</span>
         <button onclick="resetHubProgress()" class="hover:text-red-400 transition">Сбросить все данные</button>
     </footer>
 
@@ -162,21 +189,74 @@
             auth: { persistSession: false }
         });
 
-// Отправка очков в базу через REST API
-        window.submitScore = async function(gameId, score) {
-            if (!score || score <= 0) return;
+        // Получение идентификатора и имени игрока (Telegram -> Пользовательский Ник -> Гость)
+        function getPlayerIdentity() {
+            const tgUser = window.Telegram?.WebApp?.initDataUnsafe?.user;
+            
+            // 1. Если игра открыта из Telegram Mini App
+            if (tgUser && tgUser.id) {
+                const tgName = tgUser.username || tgUser.first_name || 'Telegram_Player';
+                return {
+                    userId: Number(tgUser.id),
+                    username: tgName
+                };
+            }
 
-            // Если зашли не из Телеграма, создаем уникальный локальный ID для этого браузера/устройства
+            // 2. Если игра открыта в обычном браузере
+            let customName = localStorage.getItem('cyber_arcade_custom_username');
             let guestId = localStorage.getItem('cyber_arcade_guest_id');
+            
             if (!guestId) {
-                guestId = Math.floor(100000 + Math.random() * 900000); // Случайный 6-значный ID
+                guestId = Math.floor(100000 + Math.random() * 900000);
                 localStorage.setItem('cyber_arcade_guest_id', guestId);
             }
 
-            const tgUser = window.Telegram?.WebApp?.initDataUnsafe?.user;
-            // Если есть реальный юзер Telegram — берем его ID и ник, иначе гостевой
-            const userId = tgUser && tgUser.id ? Number(tgUser.id) : Number(guestId); 
-            const username = tgUser ? (tgUser.username || tgUser.first_name || 'Игрок') : ('Игрок_' + guestId);
+            return {
+                userId: Number(guestId),
+                username: customName || ('Игрок_' + guestId)
+            };
+        }
+
+        // Обновление имени в интерфейсе
+        function updateHubUIProfile() {
+            const identity = getPlayerIdentity();
+            const nameEl = document.getElementById('current-username-display');
+            if (nameEl) {
+                nameEl.innerText = identity.username;
+            }
+        }
+
+        // Управление модальным окном смены ника
+        function openChangeUsernameModal() {
+            const identity = getPlayerIdentity();
+            const input = document.getElementById('username-input');
+            input.value = identity.username.startsWith('Игрок_') ? '' : identity.username;
+            document.getElementById('username-modal').classList.remove('hidden');
+        }
+
+        function closeUsernameModal() {
+            document.getElementById('username-modal').classList.add('hidden');
+        }
+
+        async function saveCustomUsername() {
+            const input = document.getElementById('username-input');
+            const newName = input.value.trim();
+            if (newName.length > 0) {
+                localStorage.setItem('cyber_arcade_custom_username', newName);
+                closeUsernameModal();
+                updateHubUIProfile();
+                
+                // Переотправляем очки и перезагружаем таблицу лидеров
+                await resubmitAllScores();
+                loadLeaderboard('global');
+            }
+        }
+
+        // Функция отправки очков в базу через REST API
+        window.submitScore = async function(gameId, score) {
+            if (!score || score <= 0) return;
+
+            const identity = getPlayerIdentity();
 
             try {
                 const res = await fetch(SUPABASE_URL + '/rest/v1/leaderboard', {
@@ -188,8 +268,8 @@
                         'Prefer': 'resolution=merge-duplicates'
                     },
                     body: JSON.stringify({
-                        user_id: userId,
-                        username: username,
+                        user_id: identity.userId,
+                        username: identity.username,
                         score: Number(score),
                         game_id: gameId
                     })
@@ -199,7 +279,7 @@
                     const txt = await res.text();
                     console.error('API Error:', txt);
                 } else {
-                    console.log('Score submitted successfully:', gameId, score, 'as user:', username);
+                    console.log('Score submitted successfully:', gameId, score, 'as user:', identity.username);
                 }
             } catch (err) {
                 console.error('Network Exception during submitScore:', err);
@@ -247,6 +327,8 @@
                         if (!userMap[uid]) {
                             userMap[uid] = { username: row.username || 'Алиса', totalScore: 0 };
                         }
+                        // Всегда берем самое свежее имя пользователя
+                        if (row.username) userMap[uid].username = row.username;
                         userMap[uid].totalScore += Number(row.score || 0);
                     });
 
@@ -286,36 +368,34 @@
             }
         }
 
-        // Загрузка данных хаба, расчет ранга и отправка очков в базу
+        // Переотправка всех очков при смене ника
+        async function resubmitAllScores() {
+            let p1 = 0, p2 = 0, p3 = 0, p4 = 0, p5 = 0;
+
+            try { p1 = JSON.parse(localStorage.getItem('power_station_save_v5') || '{}').prestige || 0; } catch(e){}
+            try { p2 = JSON.parse(localStorage.getItem('neon_solitaire_save_v2') || '{}').prestige || 0; } catch(e){}
+            try { p3 = JSON.parse(localStorage.getItem('circuit_fix_save_v6') || '{}').prestige || 0; } catch(e){}
+            try { p4 = JSON.parse(localStorage.getItem('silicon_miner_save_v4') || '{}').prestige || 0; } catch(e){}
+            try { p5 = JSON.parse(localStorage.getItem('repair_shop_save_v3') || '{}').prestige || 0; } catch(e){}
+
+            if (p1 > 0) await submitScore('power_station', p1);
+            if (p2 > 0) await submitScore('neon_solitaire', p2);
+            if (p3 > 0) await submitScore('circuit_fix', p3);
+            if (p4 > 0) await submitScore('silicon_miner', p4);
+            if (p5 > 0) await submitScore('repair_shop', p5);
+        }
+
+        // Загрузка данных хаба, расчет ранга и синхронизация
         async function loadHubData() {
             let p1 = 0, p2 = 0, p3 = 0, p4 = 0, p5 = 0;
 
-            try {
-                const s1 = JSON.parse(localStorage.getItem('power_station_save_v5') || '{}');
-                p1 = s1.prestige || 0;
-            } catch(e){}
+            try { p1 = JSON.parse(localStorage.getItem('power_station_save_v5') || '{}').prestige || 0; } catch(e){}
+            try { p2 = JSON.parse(localStorage.getItem('neon_solitaire_save_v2') || '{}').prestige || 0; } catch(e){}
+            try { p3 = JSON.parse(localStorage.getItem('circuit_fix_save_v6') || '{}').prestige || 0; } catch(e){}
+            try { p4 = JSON.parse(localStorage.getItem('silicon_miner_save_v4') || '{}').prestige || 0; } catch(e){}
+            try { p5 = JSON.parse(localStorage.getItem('repair_shop_save_v3') || '{}').prestige || 0; } catch(e){}
 
-            try {
-                const s2 = JSON.parse(localStorage.getItem('neon_solitaire_save_v2') || '{}');
-                p2 = s2.prestige || 0;
-            } catch(e){}
-
-            try {
-                const s3 = JSON.parse(localStorage.getItem('circuit_fix_save_v6') || '{}');
-                p3 = s3.prestige || 0;
-            } catch(e){}
-
-            try {
-                const s4 = JSON.parse(localStorage.getItem('silicon_miner_save_v4') || '{}');
-                p4 = s4.prestige || 0;
-            } catch(e){}
-
-            try {
-                const s5 = JSON.parse(localStorage.getItem('repair_shop_save_v3') || '{}');
-                p5 = s5.prestige || 0;
-            } catch(e){}
-
-            // Вывод по модулям
+            // Вывод престижа по модулям
             document.getElementById('mod1-prestige').innerText = `⭐ ${p1}`;
             document.getElementById('mod2-prestige').innerText = `⭐ ${p2}`;
             document.getElementById('mod3-prestige').innerText = `⭐ ${p3}`;
@@ -326,12 +406,11 @@
             let total = p1 + p2 + p3 + p4 + p5;
             document.getElementById('total-prestige').innerText = total;
 
-            // Отправка очков в Supabase по каждому модулю
-            if (p1 > 0) await submitScore('power_station', p1);
-            if (p2 > 0) await submitScore('neon_solitaire', p2);
-            if (p3 > 0) await submitScore('circuit_fix', p3);
-            if (p4 > 0) await submitScore('silicon_miner', p4);
-            if (p5 > 0) await submitScore('repair_shop', p5);
+            // Обновление профиля пользователя в UI
+            updateHubUIProfile();
+
+            // Синхронизация с Supabase
+            await resubmitAllScores();
 
             // Расчет ранга мастера
             let rankEl = document.getElementById('master-rank');
@@ -340,7 +419,7 @@
                 rankEl.className = "text-[10px] bg-amber-950 border border-amber-500 text-amber-300 px-2.5 py-0.5 rounded-full font-bold";
             } else if (total >= 80) {
                 rankEl.innerText = "Ранг: Старший Электромеханик ⚡";
-                rankEl.className = "text-[10px] and bg-purple-950 border border-purple-500 text-purple-300 px-2.5 py-0.5 rounded-full font-bold";
+                rankEl.className = "text-[10px] bg-purple-950 border border-purple-500 text-purple-300 px-2.5 py-0.5 rounded-full font-bold";
             } else if (total >= 30) {
                 rankEl.innerText = "Ранг: Опытный Монтажник 🔌";
                 rankEl.className = "text-[10px] bg-blue-950 border border-blue-500 text-blue-300 px-2.5 py-0.5 rounded-full font-bold";
@@ -349,7 +428,7 @@
                 rankEl.className = "text-[10px] bg-slate-800 border border-slate-700 text-slate-300 px-2.5 py-0.5 rounded-full font-bold";
             }
 
-            // Загружаем общую табличку лидеров при старте
+            // Загрузка общей таблицы лидеров при запуске
             loadLeaderboard('global');
         }
 
@@ -360,7 +439,7 @@
             }
         }
 
-        // Старт при загрузке страницы
+        // Старт при загрузке DOM
         window.addEventListener('DOMContentLoaded', () => {
             loadHubData();
         });
