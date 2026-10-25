@@ -167,26 +167,40 @@
         window.submitScore = async function(gameId, score) {
             if (!score || score <= 0) return;
 
-            const tgUser = window.Telegram?.WebApp?.initDataUnsafe?.user;
-            // Жестко преобразуем ID в число (int8 для Supabase), по умолчанию 777777
-            const userId = tgUser && tgUser.id ? Number(tgUser.id) : 777777; 
-            const username = tgUser ? (tgUser.username || tgUser.first_name || 'Алиса') : 'Алиса';
+            const SUPABASE_URL = 'https://vcwuemsgkoywvpbinknk.supabase.co';
+            const SUPABASE_ANON_KEY = 'sb_publishable_Yj5hFZj-TQRGHUOPQx7LTg_220cvLPV';
 
-            console.log(`[Sync] Отправка в базу: user=${userId}, game=${gameId}, score=${score}`);
+            const tgUser = window.Telegram?.WebApp?.initDataUnsafe?.user;
+            const userId = tgUser && tgUser.id ? Number(tgUser.id) : 777777; 
+            const username = tgUser ? (tgUser.username || tgUser.first_name || 'Alisa') : 'Alisa';
 
             try {
-                // Сначала удаляем старую запись для этого юзера и игры
-                const { error: deleteErr } = await supabaseClient
-                    .from('leaderboard')
-                    .delete()
-                    .eq('user_id', userId)
-                    .eq('game_id', gameId);
+                const response = await fetch(`${SUPABASE_URL}/rest/v1/leaderboard`, {
+                    method: 'POST',
+                    headers: {
+                        'apikey': SUPABASE_ANON_KEY,
+                        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+                        'Content-Type': 'application/json',
+                        'Prefer': 'resolution=merge-duplicates' 
+                    },
+                    body: JSON.stringify({
+                        user_id: userId,
+                        username: username,
+                        score: Number(score),
+                        game_id: gameId
+                    })
+                });
 
-                if (deleteErr) {
-                    console.error('[Supabase Delete Error]:', deleteErr);
-                    return;
+                if (!response.ok) {
+                    const errText = await response.text();
+                    console.error('Cancel REST API:', errText);
+                } else {
+                    console.log(`Success upload to REST: ${gameId} = ${score}`);
                 }
-
+            } catch (err) {
+                console.error('Ethernet unclose:', err);
+            }
+        };
                 // Вставляем свежий результат
                 const { data, error: insertErr } = await supabaseClient
                     .from('leaderboard')
