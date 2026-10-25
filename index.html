@@ -161,21 +161,32 @@
         const SUPABASE_ANON_KEY = 'sb_publishable_Yj5hFZj-TQRGHUoPQx7LTg_220cvLPV';
         const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-        // Функция отправки рекорда (с числовым userId для int8)
+        // Бронебойная функция отправки рекорда с отладкой
         window.submitScore = async function(gameId, score) {
+            if (!score || score <= 0) return;
+
             const tgUser = window.Telegram?.WebApp?.initDataUnsafe?.user;
+            // Жестко преобразуем ID в число (int8 для Supabase), по умолчанию 777777
             const userId = tgUser && tgUser.id ? Number(tgUser.id) : 777777; 
-            const username = tgUser ? (tgUser.username || tgUser.first_name) : 'Алиса';
+            const username = tgUser ? (tgUser.username || tgUser.first_name || 'Алиса') : 'Алиса';
+
+            console.log(`[Sync] Отправка в базу: user=${userId}, game=${gameId}, score=${score}`);
 
             try {
-                // Используем upsert (или delete + insert) для актуализации
-                await supabaseClient
+                // Сначала удаляем старую запись для этого юзера и игры
+                const { error: deleteErr } = await supabaseClient
                     .from('leaderboard')
                     .delete()
                     .eq('user_id', userId)
                     .eq('game_id', gameId);
 
-                await supabaseClient
+                if (deleteErr) {
+                    console.error('[Supabase Delete Error]:', deleteErr);
+                    return;
+                }
+
+                // Вставляем свежий результат
+                const { data, error: insertErr } = await supabaseClient
                     .from('leaderboard')
                     .insert([{ 
                         user_id: userId, 
@@ -183,8 +194,14 @@
                         score: Number(score), 
                         game_id: gameId 
                     }]);
+
+                if (insertErr) {
+                    console.error('[Supabase Insert Error]:', insertErr);
+                } else {
+                    console.log(`[Supabase Success] Успешно записано в базу!`, data);
+                }
             } catch (err) {
-                console.error('Ошибка в submitScore:', err);
+                console.error('[Sync Exception Critical]:', err);
             }
         };
 
@@ -308,11 +325,11 @@
             document.getElementById('total-prestige').innerText = total;
 
             // Отправка очков в Supabase (отправляем каждый модуль, убираем глобальный дубль)
-            await submitScore('power-station', p1);
-            await submitScore('neon-solitaire', p2);
-            await submitScore('circuit-fix', p3);
-            await submitScore('cpu-cooler', p4);
-            await submitScore('repair-shop', p5);
+            if (p1 > 0)await submitScore('power-station', p1);
+            if (p1 > 0)await submitScore('neon-solitaire', p2);
+            if (p1 > 0)await submitScore('circuit-fix', p3);
+            if (p1 > 0)await submitScore('cpu-cooler', p4);
+            if (p1 > 0)await submitScore('repair-shop', p5);
 
             // Расчет ранга мастера
             let rankEl = document.getElementById('master-rank');
