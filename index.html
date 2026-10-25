@@ -261,67 +261,63 @@ window.submitScore = async function(gameId, score) {
   </div>
 </div>
 <script>
-async function loadLeaderboard(gameId) {
-    // Подсветка кнопок: ищем по onclick или тексту
-    document.querySelectorAll('.lb-btn').forEach(b => {
-        const onClickAttr = b.getAttribute('onclick') || '';
-        if (onClickAttr.includes(`'${gameId}'`)) {
-            b.style.background = '#38bdf8';
-            b.style.color = '#0f172a';
-            b.style.borderColor = '#38bdf8';
-        } else {
-            b.style.background = '#1e293b';
-            b.style.color = '#94a3b8';
-            b.style.borderColor = '#334155';
+// Функция загрузки рейтинга
+        async function loadLeaderboard(gameId) {
+            document.querySelectorAll('.lb-btn').forEach(b => {
+                const onClickAttr = b.getAttribute('onclick') || '';
+                if (onClickAttr.includes(`'${gameId}'`)) {
+                    b.style.background = '#38bdf8';
+                    b.style.color = '#0f172a';
+                    b.style.borderColor = '#38bdf8';
+                } else {
+                    b.style.background = '#1e293b';
+                    b.style.color = '#94a3b8';
+                    b.style.borderColor = '#334155';
+                }
+            });
+
+            const container = document.getElementById('leaderboard-list');
+            container.innerHTML = '<div style="text-align: center; color: #64748b; padding: 20px;">Загрузка данных из базы...</div>';
+
+            try {
+                let query = supabaseClient.from('leaderboard').select('*');
+                if (gameId && gameId !== 'global') {
+                    query = query.eq('game_id', gameId);
+                }
+                
+                const { data, error } = await query.order('score', { ascending: false }).limit(10);
+                if (error) throw error;
+
+                if (!data || data.length === 0) {
+                    container.innerHTML = '<div style="text-align: center; color: #64748b; padding: 20px;">Рекордов пока нет. Стань первым!</div>';
+                    return;
+                }
+
+                let html = '<table style="width: 100%; border-collapse: collapse; font-size: 12px;">';
+                html += '<tr style="border-bottom: 1px solid #334155; color: #94a3b8;"><th style="text-align: left; padding: 6px;">Игрок</th><th style="text-align: right; padding: 6px;">Счет</th></tr>';
+                
+                data.forEach((row, index) => {
+                    html += `<tr style="border-bottom: 1px solid #1e293b;">
+                        <td style="padding: 6px; color: #f8fafc;">${index + 1}. ${row.username || 'Алиса'}</td>
+                        <td style="text-align: right; padding: 6px; color: #38bdf8; font-weight: bold;">⭐ ${row.score}</td>
+                    </tr>`;
+                });
+                html += '</table>';
+                container.innerHTML = html;
+
+            } catch (err) {
+                console.error(err);
+                container.innerHTML = `<div style="color: #ef4444; text-align: center; padding: 15px; font-size: 11px;">⚠️ Ошибка: ${err.message || JSON.stringify(err)}</div>`;
+            }
         }
-    });
 
-    const container = document.getElementById('leaderboard-list');
-    container.innerHTML = '<div style="text-align: center; color: #64748b; padding: 20px;">Загрузка данных из базы...</div>';
-
-    try {
-        let query = supabaseClient.from('leaderboard').select('*');
-        if (gameId && gameId !== 'global') {
-            query = query.eq('game_id', gameId);
-        }
-        
-        const { data, error } = await query.order('score', { ascending: false }).limit(10);
-        if (error) throw error;
-
-        if (!data || data.length === 0) {
-            container.innerHTML = '<div style="text-align: center; color: #64748b; padding: 20px;">Рекордов пока нет. Стань первым!</div>';
-            return;
-        }
-
-        let html = '<table style="width: 100%; border-collapse: collapse; font-size: 12px;">';
-        html += '<tr style="border-bottom: 1px solid #334155; color: #94a3b8;"><th style="text-align: left; padding: 6px;">Игрок</th><th style="text-align: right; padding: 6px;">Счет</th></tr>';
-        
-        data.forEach((row, index) => {
-            html += `<tr style="border-bottom: 1px solid #1e293b;">
-                <td style="padding: 6px; color: #f8fafc;">${index + 1}. ${row.username || 'Алиса'}</td>
-                <td style="text-align: right; padding: 6px; color: #38bdf8; font-weight: bold;">⭐ ${row.score}</td>
-            </tr>`;
+        // Автозапуск и тестовая отправка рекорда при старте
+        window.addEventListener('DOMContentLoaded', () => {
+            if (typeof window.submitScore === 'function') {
+                window.submitScore('power-station', 307);
+            }
+            loadLeaderboard('global');
         });
-        html += '</table>';
-        container.innerHTML = html;
-
-    } catch (err) {
-        console.error(err);
-        container.innerHTML = `<div style="color: #ef4444; text-align: center; padding: 15px; font-size: 11px;">⚠️ Ошибка: ${err.message || JSON.stringify(err)}</div>`;
-    }
-}
-
-  // Автозагрузка общего топа при старте страницы
-  window.addEventListener('DOMContentLoaded', () => {
-    loadLeaderboard('global');
-  });
-</script>
-// Автоматический тестовый залет рекорда для проверки базы
-window.addEventListener('DOMContentLoaded', () => {
-    if (typeof window.submitScore === 'function') {
-        window.submitScore('power-station', 307);
-    }
-    loadLeaderboard('global');
-});
+    </script>
 </body>
 </html>
