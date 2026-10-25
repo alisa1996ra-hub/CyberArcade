@@ -164,24 +164,26 @@
 });
 
         // Бронебойная функция отправки рекорда с отладкой
-        window.submitScore = async function(gameId, score) {
+      window.submitScore = async function(gameId, score) {
             if (!score || score <= 0) return;
 
-            const SUPABASE_URL = 'https://vcwuemsgkoywvpbinknk.supabase.co';
-            const SUPABASE_ANON_KEY = 'sb_publishable_Yj5hFZj-TQRGHUOPQx7LTg_220cvLPV';
+            const url = 'https://vcwuemsgkoywvpbinknk.supabase.co';
+            const key = 'sb_publishable_Yj5hFZj-TQRGHUOPQx7LTg_220cvLPV';
 
             const tgUser = window.Telegram?.WebApp?.initDataUnsafe?.user;
             const userId = tgUser && tgUser.id ? Number(tgUser.id) : 777777; 
             const username = tgUser ? (tgUser.username || tgUser.first_name || 'Alisa') : 'Alisa';
 
+            const box = document.getElementById('leaderboard-list');
+
             try {
-                const response = await fetch(`${SUPABASE_URL}/rest/v1/leaderboard`, {
+                const res = await fetch(url + '/rest/v1/leaderboard', {
                     method: 'POST',
                     headers: {
-                        'apikey': SUPABASE_ANON_KEY,
-                        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+                        'apikey': key,
+                        'Authorization': 'Bearer ' + key,
                         'Content-Type': 'application/json',
-                        'Prefer': 'resolution=merge-duplicates' 
+                        'Prefer': 'resolution=merge-duplicates'
                     },
                     body: JSON.stringify({
                         user_id: userId,
@@ -191,36 +193,19 @@
                     })
                 });
 
-                if (!response.ok) {
-                    const errText = await response.text();
-                    console.error('Cancel REST API:', errText);
+                if (!res.ok) {
+                    const txt = await res.text();
+                    console.error('API Error:', txt);
+                    if (box) box.innerHTML = '<div style="color: #ef4444; padding: 8px; font-size: 10px; word-break: break-all;">Err (' + res.status + '): ' + txt + '</div>';
                 } else {
-                    console.log(`Success upload to REST: ${gameId} = ${score}`);
+                    console.log('Success:', gameId, score);
+                    loadLeaderboard(gameId);
                 }
             } catch (err) {
-                console.error('Ethernet unclose:', err);
+                console.error('Network Exception:', err);
+                if (box) box.innerHTML = '<div style="color: #ef4444; padding: 8px; font-size: 10px;">Net Err: ' + err.message + '</div>';
             }
         };
-                // Вставляем свежий результат
-                const { data, error: insertErr } = await supabaseClient
-                    .from('leaderboard')
-                    .insert([{ 
-                        user_id: userId, 
-                        username: username, 
-                        score: Number(score), 
-                        game_id: gameId 
-                    }]);
-
-                if (insertErr) {
-                    console.error('[Supabase Insert Error]:', insertErr);
-                } else {
-                    console.log(`[Supabase Success] Успешно записано в базу!`, data);
-                }
-            } catch (err) {
-                console.error('[Sync Exception Critical]:', err);
-            }
-        };
-
         // Загрузка и отрисовка таблицы лидеров (фильтруем тех, кто global-prestige)
         async function loadLeaderboard(gameId = 'global') {
             document.querySelectorAll('.lb-btn').forEach(b => {
