@@ -233,40 +233,36 @@
 
 // Умная отправка/обновление рекорда (без дублей)
 window.submitScore = async function(gameId, score) {
+    // Безопасный числовой ID для базы (int8): если Telegram не передал ID, берем дефолтное число
     const tgUser = window.Telegram?.WebApp?.initDataUnsafe?.user;
-    const userId = tgUser ? tgUser.id : 'local_alisa_master';
+    const userId = tgUser && tgUser.id ? Number(tgUser.id) : 777777; 
     const username = tgUser ? (tgUser.username || tgUser.first_name) : 'Алиса';
 
     try {
-        const { data: existing, error: fetchErr } = await supabaseClient
+        // 1. Удаляем старую запись для этого пользователя и игры, чтобы не плодить дубли
+        await supabaseClient
             .from('leaderboard')
-            .select('id, score')
+            .delete()
             .eq('user_id', userId)
-            .eq('game_id', gameId)
-            .maybeSingle();
+            .eq('game_id', gameId);
 
-        if (fetchErr) console.error('Ошибка поиска записи:', fetchErr);
+        // 2. Вставляем актуальный рекорд
+        const { error: insertErr } = await supabaseClient
+            .from('leaderboard')
+            .insert([{ 
+                user_id: userId, 
+                username: username, 
+                score: Number(score), 
+                game_id: gameId 
+            }]);
 
-        if (existing) {
-            if (score >= existing.score) {
-                const { error: updateErr } = await supabaseClient
-                    .from('leaderboard')
-                    .update({ score: score, username: username })
-                    .eq('id', existing.id);
-                if (updateErr) throw updateErr;
-            }
+        if (insertErr) {
+            console.error('[Supabase Insert Error]:', insertErr.message);
         } else {
-            const { error: insertErr } = await supabaseClient
-                .from('leaderboard')
-                .insert([{ user_id: userId, username: username, score: score, game_id: gameId }]);
-            if (insertErr) throw insertErr;
+            console.log(`[Supabase Success] Успешно отправлено: ${gameId} = ${score}`);
         }
-
-        console.log('Рекорды синхронизированы с базой без дублей.');
-        return true;
     } catch (err) {
-        console.error('Ошибка в submitScore:', err.message);
-        return false;
+        console.error('[Sync Exception]:', err);
     }
 };
 </script>
