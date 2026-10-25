@@ -262,20 +262,19 @@ window.submitScore = async function(gameId, score) {
 </div>
 <script>
 async function loadLeaderboard(gameId) {
-    // Сбрасываем подсветку всех кнопок
+    // Подсветка кнопок: ищем по onclick или тексту
     document.querySelectorAll('.lb-btn').forEach(b => {
-        b.style.background = '#1e293b';
-        b.style.color = '#94a3b8';
-        b.style.borderColor = '#334155';
+        const onClickAttr = b.getAttribute('onclick') || '';
+        if (onClickAttr.includes(`'${gameId}'`)) {
+            b.style.background = '#38bdf8';
+            b.style.color = '#0f172a';
+            b.style.borderColor = '#38bdf8';
+        } else {
+            b.style.background = '#1e293b';
+            b.style.color = '#94a3b8';
+            b.style.borderColor = '#334155';
+        }
     });
-    
-    // Подсвечиваем ту кнопку, которую нажали
-    const activeBtn = document.querySelector(`.lb-btn[data-game="${gameId}"]`);
-    if (activeBtn) {
-        activeBtn.style.background = '#38bdf8';
-        activeBtn.style.color = '#0f172a';
-        activeBtn.style.borderColor = '#38bdf8';
-    }
 
     const container = document.getElementById('leaderboard-list');
     container.innerHTML = '<div style="text-align: center; color: #64748b; padding: 20px;">Загрузка данных из базы...</div>';
@@ -317,5 +316,12 @@ async function loadLeaderboard(gameId) {
     loadLeaderboard('global');
   });
 </script>
+// Автоматический тестовый залет рекорда для проверки базы
+window.addEventListener('DOMContentLoaded', () => {
+    if (typeof window.submitScore === 'function') {
+        window.submitScore('power-station', 307);
+    }
+    loadLeaderboard('global');
+});
 </body>
 </html>
